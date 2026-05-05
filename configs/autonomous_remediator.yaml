@@ -1,0 +1,29 @@
+# ARGUS — AutonomousRemediator Configuration
+# ============================================
+# Load via: from src.config import load_remediator_config
+
+thresholds:
+  # Risk score decision ladder (0.0 – 1.0 composite safety score)
+  no_action_below: 0.40       # Score < 0.40  → no action taken
+  filter_output_below: 0.65   # 0.40–0.64     → OutputFilterAgent
+  quarantine_below: 0.80      # 0.65–0.79     → QuarantineAgent
+  rollback_below: 0.90        # 0.80–0.89     → RollbackAgent
+                               # >= 0.90       → EscalationAgent (human)
+
+serving:
+  max_latency_ms: 200.0       # E2E remediation SLA
+  llm_model: "meta-llama/Llama-3.1-70B-Instruct"
+  llm_max_tokens: 1024
+  spanner_instance: "${SPANNER_INSTANCE_ID}"
+  spanner_database: "${SPANNER_DATABASE_ID}"
+  redis_url: "${REDIS_URL}"
+  slack_webhook_url: ""       # Set in .env or GKE secret
+  pagerduty_routing_key: ""   # Set in .env or GKE secret
+
+kafka_signals_topic: "argus.safety.signals"
+kafka_remediation_topic: "argus.remediation"
+
+audit_log_enabled: true       # Write every decision to Cloud Spanner
+
+rate_limit_window_seconds: 60
+rate_limit_max_calls: 10      # Max 10 agent calls per 60s before throttle kicks in

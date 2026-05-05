@@ -1,0 +1,62 @@
+# ARGUS — OmniSafetyCritic Training Configuration (MOD-03)
+# =========================================================
+
+base_model:
+  name: "llava-hf/llava-v1.6-mistral-7b-hf"
+  dtype: "bfloat16"
+  load_in_4bit: false    # Set true for memory-constrained setups
+
+lora:
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules: ["q_proj", "k_proj", "v_proj", "o_proj"]
+  bias: "none"
+  task_type: "CAUSAL_LM"
+
+dpo:
+  beta: 0.1              # KL divergence weight (higher = stays closer to reference)
+  max_prompt_length: 512
+  max_length: 1024
+  loss_type: "sigmoid"   # sigmoid DPO loss (more stable than default)
+
+training:
+  output_dir: "models/safety_critic"
+  num_epochs: 3
+  per_device_train_batch_size: 4
+  per_device_eval_batch_size: 8
+  gradient_accumulation_steps: 4     # Effective batch size = 4 * 4 = 16
+  learning_rate: 5.0e-5
+  lr_scheduler_type: "cosine"
+  warmup_ratio: 0.1
+  fp16: false
+  bf16: true
+  max_grad_norm: 1.0
+  eval_steps: 100
+  save_steps: 200
+  logging_steps: 10
+  load_best_model_at_end: true
+  metric_for_best_model: "eval_accuracy"
+
+data:
+  train_dataset: "data/train/safety_preferences_train.jsonl"
+  eval_dataset: "data/eval/safety_preferences_eval.jsonl"
+  # Format: {"prompt": "...", "chosen": "...", "rejected": "..."}
+
+mlflow:
+  experiment_name: "argus/safety_critic/dpo"
+  run_tags:
+    model: "llava-1.6-7b"
+    technique: "dpo"
+    module: "MOD-03"
+
+wandb:
+  project: "argus-safety-critic"
+  tags: ["dpo", "llava", "multimodal", "safety"]
+
+serving:
+  engine: "vllm"
+  max_model_len: 2048
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.85
+  target_latency_ms: 80     # p95 SLA

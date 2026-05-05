@@ -1,0 +1,46 @@
+{
+  "module": "MOD-03_OmniSafetyCritic",
+  "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+  "adapter_path": "/content/drive/MyDrive/argus_safety_critic/tinyllama_dpo_final",
+  "method": "DPO + QLoRA (NF4, r=8, alpha=16)",
+  "precision": 0.5294,
+  "recall": 0.9643,
+  "f1": 0.6835,
+  "tp": 27,
+  "fp": 24,
+  "fn": 1,
+  "tn": 1,
+  "latency_p50_ms": 147.93,
+  "latency_p95_ms": 152.63,
+  "latency_p99_ms": 172.48,
+  "latency_mean_ms": 149.0,
+  "per_modality": {
+    "code": {
+      "precision": 0.3,
+      "recall": 1.0,
+      "f1": 0.4615,
+      "n": 10
+    },
+    "structured": {
+      "precision": 0.3333,
+      "recall": 1.0,
+      "f1": 0.5,
+      "n": 9
+    },
+    "text": {
+      "precision": 0.6562,
+      "recall": 0.9545,
+      "f1": 0.7778,
+      "n": 34
+    }
+  },
+  "benchmark": {
+    "precision_pass": false,
+    "f1_pass": false,
+    "latency_p95_pass": false,
+    "all_pass": false
+  },
+  "test_n": 53,
+  "threshold": 0.02931223064661026,
+  "timestamp": "2026-05-03T17:00:04.095789+00:00"
+}

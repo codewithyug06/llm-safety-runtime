@@ -1,0 +1,189 @@
+name: ARGUS Safety Evaluation CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.11"
+  MLFLOW_TRACKING_URI: "http://localhost:5000"
+
+jobs:
+  lint-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install lint tools
+        run: pip install ruff black isort mypy types-PyYAML types-redis types-requests
+
+      - name: Run ruff (advisory)
+        run: ruff check src/ scripts/ tests/ --ignore E501,W503,W504
+        continue-on-error: true
+
+      - name: Run black (advisory)
+        run: black --check src/ scripts/ tests/
+        continue-on-error: true
+
+      - name: Run isort (advisory)
+        run: isort --check-only src/ scripts/ tests/
+        continue-on-error: true
+
+      - name: Run mypy (advisory)
+        run: mypy src/ --ignore-missing-imports --no-strict-optional
+        continue-on-error: true
+
+      - name: Lint checks complete
+        run: echo "Lint checks done (all advisory — unit tests are the real gate)"
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: lint-typecheck
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install core test dependencies
+        run: |
+          pip install pytest pytest-cov pytest-asyncio pytest-timeout pytest-mock
+          pip install numpy structlog pydantic pydantic-settings fastapi httpx \
+                      scikit-learn scipy mlflow langgraph
+
+      - name: Install PyTorch (CPU)
+        run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install JAX (CPU)
+        run: pip install "jax[cpu]"
+
+      - name: Verify key imports
+        run: |
+          python -c "import jax; print('jax', jax.__version__)" || echo "WARNING: jax not available"
+          python -c "import torch; print('torch', torch.__version__)"
+          python -c "from src.causal_engine.intervention import CausalInterventionEngine; print('CausalInterventionEngine OK')"
+          python -c "from src.latent_sentinel.sentinel import LatentSentinel; print('LatentSentinel OK')"
+          python -c "from src.safety_critic.critic import OmniSafetyCriticModel; print('OmniSafetyCriticModel OK')"
+          python -c "from src.federated_rlhf.client import ArgusFederatedClient; print('ArgusFederatedClient OK')"
+
+      - name: Run unit tests
+        run: |
+          pytest tests/unit/ \
+            -v \
+            --timeout=300 \
+            -p no:warnings \
+            --tb=short
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results-${{ matrix.python-version }}-${{ github.sha }}
+          path: "*.xml"
+          retention-days: 7
+          if-no-files-found: ignore
+
+  safety-benchmark:
+    name: Safety Benchmark (SLA Validation)
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install numpy structlog pydantic pydantic-settings scikit-learn
+
+      - name: Run LatentSentinel benchmark (assert p95 < 10ms)
+        run: python scripts/benchmark_sentinel.py --assert-sla --num-requests 200
+        timeout-minutes: 5
+
+      - name: Upload benchmark report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-report-${{ github.sha }}
+          path: docs/benchmarks/sentinel_latency.md
+          retention-days: 30
+
+  integration-tests:
+    name: Integration Tests (mocked infra)
+    runs-on: ubuntu-latest
+    needs: unit-tests
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install pytest pytest-asyncio pytest-timeout pytest-mock
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install numpy structlog pydantic pydantic-settings fastapi httpx langgraph
+
+      - name: Run e2e pipeline tests (mocked Kafka/Redis/Spanner)
+        run: |
+          pytest tests/e2e/ \
+            -v \
+            --timeout=30 \
+            -x
+
+  trigger-kubeflow:
+    name: Trigger Kubeflow Training Pipeline
+    runs-on: ubuntu-latest
+    needs: [safety-benchmark, integration-tests]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install kfp
+        run: pip install kfp>=2.4.0
+
+      - name: Submit Kubeflow pipeline
+        env:
+          KFP_HOST: ${{ secrets.KFP_HOST }}
+        run: |
+          python src/mlops/pipelines/federated_rlhf_pipeline.py \
+            --run \
+            --host "$KFP_HOST" \
+            --experiment argus/federated_rlhf
+        if: env.KFP_HOST != ''
+        continue-on-error: true  # Don't fail CI if KFP not configured

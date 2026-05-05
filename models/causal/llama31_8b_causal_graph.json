@@ -1,0 +1,1505 @@
+{
+  "model_id": "llama31_8b",
+  "version": 1,
+  "total_edges": 128,
+  "edges": [
+    {
+      "layer_idx": 0,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:09.879082+00:00"
+    },
+    {
+      "layer_idx": 0,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:09.879082+00:00"
+    },
+    {
+      "layer_idx": 0,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:09.879082+00:00"
+    },
+    {
+      "layer_idx": 0,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:09.879082+00:00"
+    },
+    {
+      "layer_idx": 1,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.023617+00:00"
+    },
+    {
+      "layer_idx": 1,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.023617+00:00"
+    },
+    {
+      "layer_idx": 1,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.023617+00:00"
+    },
+    {
+      "layer_idx": 1,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.023617+00:00"
+    },
+    {
+      "layer_idx": 2,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.024618+00:00"
+    },
+    {
+      "layer_idx": 2,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.024618+00:00"
+    },
+    {
+      "layer_idx": 2,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.024618+00:00"
+    },
+    {
+      "layer_idx": 2,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.024618+00:00"
+    },
+    {
+      "layer_idx": 3,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.025617+00:00"
+    },
+    {
+      "layer_idx": 3,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.025617+00:00"
+    },
+    {
+      "layer_idx": 3,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.025617+00:00"
+    },
+    {
+      "layer_idx": 3,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.025617+00:00"
+    },
+    {
+      "layer_idx": 4,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.026617+00:00"
+    },
+    {
+      "layer_idx": 4,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.026617+00:00"
+    },
+    {
+      "layer_idx": 4,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.026617+00:00"
+    },
+    {
+      "layer_idx": 4,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.026617+00:00"
+    },
+    {
+      "layer_idx": 5,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.028620+00:00"
+    },
+    {
+      "layer_idx": 5,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.028620+00:00"
+    },
+    {
+      "layer_idx": 5,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.028620+00:00"
+    },
+    {
+      "layer_idx": 5,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.028620+00:00"
+    },
+    {
+      "layer_idx": 6,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.029617+00:00"
+    },
+    {
+      "layer_idx": 6,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.029617+00:00"
+    },
+    {
+      "layer_idx": 6,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.029617+00:00"
+    },
+    {
+      "layer_idx": 6,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.029617+00:00"
+    },
+    {
+      "layer_idx": 7,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.030618+00:00"
+    },
+    {
+      "layer_idx": 7,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.030618+00:00"
+    },
+    {
+      "layer_idx": 7,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.030618+00:00"
+    },
+    {
+      "layer_idx": 7,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.030618+00:00"
+    },
+    {
+      "layer_idx": 8,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.031617+00:00"
+    },
+    {
+      "layer_idx": 8,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.031617+00:00"
+    },
+    {
+      "layer_idx": 8,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.031617+00:00"
+    },
+    {
+      "layer_idx": 8,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.031617+00:00"
+    },
+    {
+      "layer_idx": 9,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.032617+00:00"
+    },
+    {
+      "layer_idx": 9,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.032617+00:00"
+    },
+    {
+      "layer_idx": 9,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.032617+00:00"
+    },
+    {
+      "layer_idx": 9,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.032617+00:00"
+    },
+    {
+      "layer_idx": 10,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.033617+00:00"
+    },
+    {
+      "layer_idx": 10,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.033617+00:00"
+    },
+    {
+      "layer_idx": 10,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.033617+00:00"
+    },
+    {
+      "layer_idx": 10,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.033617+00:00"
+    },
+    {
+      "layer_idx": 11,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.034618+00:00"
+    },
+    {
+      "layer_idx": 11,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.034618+00:00"
+    },
+    {
+      "layer_idx": 11,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.034618+00:00"
+    },
+    {
+      "layer_idx": 11,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.034618+00:00"
+    },
+    {
+      "layer_idx": 12,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.036618+00:00"
+    },
+    {
+      "layer_idx": 12,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.036618+00:00"
+    },
+    {
+      "layer_idx": 12,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.036618+00:00"
+    },
+    {
+      "layer_idx": 12,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.036618+00:00"
+    },
+    {
+      "layer_idx": 13,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.037618+00:00"
+    },
+    {
+      "layer_idx": 13,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.037618+00:00"
+    },
+    {
+      "layer_idx": 13,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.037618+00:00"
+    },
+    {
+      "layer_idx": 13,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.037618+00:00"
+    },
+    {
+      "layer_idx": 14,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.038617+00:00"
+    },
+    {
+      "layer_idx": 14,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.038617+00:00"
+    },
+    {
+      "layer_idx": 14,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.038617+00:00"
+    },
+    {
+      "layer_idx": 14,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.038617+00:00"
+    },
+    {
+      "layer_idx": 15,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.038617+00:00"
+    },
+    {
+      "layer_idx": 15,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.038617+00:00"
+    },
+    {
+      "layer_idx": 15,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.038617+00:00"
+    },
+    {
+      "layer_idx": 15,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.038617+00:00"
+    },
+    {
+      "layer_idx": 16,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.039617+00:00"
+    },
+    {
+      "layer_idx": 16,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.039617+00:00"
+    },
+    {
+      "layer_idx": 16,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.039617+00:00"
+    },
+    {
+      "layer_idx": 16,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.039617+00:00"
+    },
+    {
+      "layer_idx": 17,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.041618+00:00"
+    },
+    {
+      "layer_idx": 17,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.041618+00:00"
+    },
+    {
+      "layer_idx": 17,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.041618+00:00"
+    },
+    {
+      "layer_idx": 17,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.041618+00:00"
+    },
+    {
+      "layer_idx": 18,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.043618+00:00"
+    },
+    {
+      "layer_idx": 18,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.043618+00:00"
+    },
+    {
+      "layer_idx": 18,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.043618+00:00"
+    },
+    {
+      "layer_idx": 18,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.043618+00:00"
+    },
+    {
+      "layer_idx": 19,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.044620+00:00"
+    },
+    {
+      "layer_idx": 19,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.044620+00:00"
+    },
+    {
+      "layer_idx": 19,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.044620+00:00"
+    },
+    {
+      "layer_idx": 19,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.044620+00:00"
+    },
+    {
+      "layer_idx": 20,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.045618+00:00"
+    },
+    {
+      "layer_idx": 20,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.045618+00:00"
+    },
+    {
+      "layer_idx": 20,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.045618+00:00"
+    },
+    {
+      "layer_idx": 20,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.045618+00:00"
+    },
+    {
+      "layer_idx": 21,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.046624+00:00"
+    },
+    {
+      "layer_idx": 21,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.046624+00:00"
+    },
+    {
+      "layer_idx": 21,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.046624+00:00"
+    },
+    {
+      "layer_idx": 21,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.046624+00:00"
+    },
+    {
+      "layer_idx": 22,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.047623+00:00"
+    },
+    {
+      "layer_idx": 22,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.047623+00:00"
+    },
+    {
+      "layer_idx": 22,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.047623+00:00"
+    },
+    {
+      "layer_idx": 22,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.047623+00:00"
+    },
+    {
+      "layer_idx": 23,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.048624+00:00"
+    },
+    {
+      "layer_idx": 23,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.048624+00:00"
+    },
+    {
+      "layer_idx": 23,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.048624+00:00"
+    },
+    {
+      "layer_idx": 23,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.048624+00:00"
+    },
+    {
+      "layer_idx": 24,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.049624+00:00"
+    },
+    {
+      "layer_idx": 24,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.049624+00:00"
+    },
+    {
+      "layer_idx": 24,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.049624+00:00"
+    },
+    {
+      "layer_idx": 24,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.049624+00:00"
+    },
+    {
+      "layer_idx": 25,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.050663+00:00"
+    },
+    {
+      "layer_idx": 25,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.050663+00:00"
+    },
+    {
+      "layer_idx": 25,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.050663+00:00"
+    },
+    {
+      "layer_idx": 25,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.050663+00:00"
+    },
+    {
+      "layer_idx": 26,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.051623+00:00"
+    },
+    {
+      "layer_idx": 26,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.051623+00:00"
+    },
+    {
+      "layer_idx": 26,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.051623+00:00"
+    },
+    {
+      "layer_idx": 26,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.051623+00:00"
+    },
+    {
+      "layer_idx": 27,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.052624+00:00"
+    },
+    {
+      "layer_idx": 27,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.052624+00:00"
+    },
+    {
+      "layer_idx": 27,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.052624+00:00"
+    },
+    {
+      "layer_idx": 27,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.052624+00:00"
+    },
+    {
+      "layer_idx": 28,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.053624+00:00"
+    },
+    {
+      "layer_idx": 28,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.053624+00:00"
+    },
+    {
+      "layer_idx": 28,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.053624+00:00"
+    },
+    {
+      "layer_idx": 28,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.053624+00:00"
+    },
+    {
+      "layer_idx": 29,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.054624+00:00"
+    },
+    {
+      "layer_idx": 29,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.054624+00:00"
+    },
+    {
+      "layer_idx": 29,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.054624+00:00"
+    },
+    {
+      "layer_idx": 29,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.054624+00:00"
+    },
+    {
+      "layer_idx": 30,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.055625+00:00"
+    },
+    {
+      "layer_idx": 30,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.055625+00:00"
+    },
+    {
+      "layer_idx": 30,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.055625+00:00"
+    },
+    {
+      "layer_idx": 30,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.055625+00:00"
+    },
+    {
+      "layer_idx": 31,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "hallucination",
+      "causal_effect": 0.423465,
+      "ablation_delta": -0.423465,
+      "patching_delta": -0.359945,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.056625+00:00"
+    },
+    {
+      "layer_idx": 31,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "jailbreak",
+      "causal_effect": 0.314497,
+      "ablation_delta": -0.314497,
+      "patching_delta": -0.267322,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.056625+00:00"
+    },
+    {
+      "layer_idx": 31,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "toxic_reasoning",
+      "causal_effect": 0.185371,
+      "ablation_delta": 0.185371,
+      "patching_delta": 0.157566,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.056625+00:00"
+    },
+    {
+      "layer_idx": 31,
+      "head_idx": 0,
+      "model_id": "llama31_8b",
+      "behavior_category": "policy_violation",
+      "causal_effect": 0.214809,
+      "ablation_delta": 0.214809,
+      "patching_delta": 0.182588,
+      "confidence": 0.95,
+      "discovered_at": "2026-05-03T13:15:10.056625+00:00"
+    }
+  ],
+  "top_k_heads": {
+    "hallucination": [
+      {
+        "layer_idx": 0,
+        "head_idx": 0
+      },
+      {
+        "layer_idx": 1,
+        "head_idx": 0
+      },
+      {
+        "layer_idx": 2,
+        "head_idx": 0
+      },
+      {
+        "layer_idx": 3,
+        "head_idx": 0
+      },
+      {
+        "layer_idx": 4,
+        "head_idx": 0
+      }
+    ],
+    "jailbreak": [
+      {
+        "layer_idx": 0,
+        "head_idx": 0
+      },
+      {
+        "layer_idx": 1,
+        "head_idx": 0
+      },
+      {
+        "layer_idx": 2,
+        "head_idx": 0
+      },
+      {
+        "layer_idx": 3,
+        "head_idx": 0
+      },
+      {
+        "layer_idx": 4,
+        "head_idx": 0
+      }
+    ],
+    "toxic_reasoning": [
+      {
+        "layer_idx": 0,
+        "head_idx": 0
+      },
+      {
+        "layer_idx": 1,
+        "head_idx": 0
+      },
+      {
+        "layer_idx": 2,
+        "head_idx": 0
+      },
+      {
+        "layer_idx": 3,
+        "head_idx": 0
+      },
+      {
+        "layer_idx": 4,
+        "head_idx": 0
+      }
+    ],
+    "policy_violation": [
+      {
+        "layer_idx": 0,
+        "head_idx": 0
+      },
+      {
+        "layer_idx": 1,
+        "head_idx": 0
+      },
+      {
+        "layer_idx": 2,
+        "head_idx": 0
+      },
+      {
+        "layer_idx": 3,
+        "head_idx": 0
+      },
+      {
+        "layer_idx": 4,
+        "head_idx": 0
+      }
+    ]
+  }
+}

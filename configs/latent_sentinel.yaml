@@ -1,0 +1,66 @@
+# ARGUS — LatentSentinel Configuration
+# ======================================
+# Load via: from src.config import LatentSentinelConfig
+
+model:
+  name: "meta-llama/Meta-Llama-3.1-8B-Instruct"
+  device: "cuda"
+  dtype: "bfloat16"
+
+hooks:
+  # Layers to attach hooks to (empty = all layers)
+  # For Llama 3.1 8B: 32 layers total
+  # Recommended: probe every 4th layer for balance of coverage vs overhead
+  target_layers: [4, 8, 12, 16, 20, 24, 28, 31]
+  use_cuda_streams: true
+
+probes:
+  hallucination:
+    enabled: true
+    model_path: "models/probes/hallucination_probe_llama31_8b.pt"
+    probe_dim: 128
+    threshold: 0.55      # Risk score above which to flag
+
+  jailbreak:
+    enabled: true
+    model_path: "models/probes/jailbreak_probe_llama31_8b.pt"
+    probe_dim: 128
+    threshold: 0.50      # Lower threshold — jailbreak is more severe
+
+  toxic_reasoning:
+    enabled: true
+    model_path: "models/probes/toxic_reasoning_probe_llama31_8b.pt"
+    probe_dim: 128
+    threshold: 0.50
+
+  policy_violation:
+    enabled: true
+    model_path: "models/probes/policy_violation_probe_llama31_8b.pt"
+    probe_dim: 128
+    threshold: 0.60
+
+aggregation:
+  # Category weights for composite score (must sum to 1.0)
+  category_weights:
+    hallucination: 0.20
+    jailbreak: 0.35
+    toxic_reasoning: 0.30
+    policy_violation: 0.15
+
+  # Layer position weights: later layers get higher weight
+  layer_weights:
+    "31": 1.5    # Final layer
+    "28": 1.3
+    "24": 1.1
+    "default": 1.0
+
+sla:
+  max_latency_ms: 10.0    # p95 target
+  warn_latency_ms: 8.0    # Log warning above this
+
+kafka:
+  topic: "argus.safety.signals"
+  bootstrap_servers: "${KAFKA_BOOTSTRAP_SERVERS}"
+  producer_config:
+    acks: "1"
+    linger_ms: 0          # No batching delay for safety signals

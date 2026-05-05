@@ -1,0 +1,30 @@
+{
+  "hallucination": {
+    "path": "models\\probes\\hallucination.pt",
+    "val_precision": 0.9012345679012346,
+    "val_recall": 0.9733333333333334,
+    "val_f1": 0.935897435897436,
+    "val_accuracy": 0.9333333333333333
+  },
+  "jailbreak": {
+    "path": "models\\probes\\jailbreak.pt",
+    "val_precision": 0.934640522875817,
+    "val_recall": 0.9533333333333334,
+    "val_f1": 0.9438943894389439,
+    "val_accuracy": 0.9433333333333334
+  },
+  "toxic_reasoning": {
+    "path": "models\\probes\\toxic_reasoning.pt",
+    "val_precision": 0.9240506329113924,
+    "val_recall": 0.9733333333333334,
+    "val_f1": 0.948051948051948,
+    "val_accuracy": 0.9466666666666667
+  },
+  "policy_violation": {
+    "path": "models\\probes\\policy_violation.pt",
+    "val_precision": 0.9177215189873418,
+    "val_recall": 0.9666666666666667,
+    "val_f1": 0.9415584415584415,
+    "val_accuracy": 0.94
+  }
+}

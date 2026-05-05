@@ -1,0 +1,80 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+
+# ── Testing & coverage ────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.cover
+
+# ── Type checking ─────────────────────────────────────────────────────────────
+.mypy_cache/
+.dmypy.json
+
+# ── Secrets & environment ─────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# ── Dev-session context files (not source code) ───────────────────────────────
+ARGUS_CONTEXT.md
+.argus/
+.claude/
+
+# ── Stray pip artefacts that landed in root ───────────────────────────────────
+=*
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Jupyter ───────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ── MLflow ────────────────────────────────────────────────────────────────────
+mlruns/
+mlartifacts/
+
+# ── Weights & Biases ──────────────────────────────────────────────────────────
+wandb/
+
+# ── Terraform ─────────────────────────────────────────────────────────────────
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+.docker/
+
+# ── Training-only checkpoint artifacts (not needed for inference) ─────────────
+# optimizer and RNG states are only needed to resume training, not for demo/eval
+models/safety_critic/checkpoint-*/optimizer.pt
+models/safety_critic/checkpoint-*/rng_state.pth
+
+# ── Scratch / eval output files ───────────────────────────────────────────────
+eval_critic_output.txt
+*.log

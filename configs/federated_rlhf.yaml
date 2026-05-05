@@ -1,0 +1,47 @@
+# ARGUS — FederatedRLHF Configuration (MOD-04)
+# =============================================
+
+coordinator:
+  host: "0.0.0.0"
+  port: 8080
+  strategy: "fedavg"        # fedavg | fedprox | fedyogi
+  min_clients: 2
+  min_available_clients: 2
+  num_rounds: 50
+
+fedprox:
+  proximal_mu: 0.01         # Regularization for heterogeneous clients
+
+differential_privacy:
+  enabled: true
+  noise_multiplier: 1.1
+  max_grad_norm: 1.0
+  target_epsilon: 3.0       # ε < 3 privacy budget
+  target_delta: 1.0e-5      # δ = 1e-5
+  accountant: "rdp"         # Rényi DP accounting
+
+local_training:
+  epochs: 2
+  batch_size: 8
+  learning_rate: 3.0e-5
+  optimizer: "adamw"
+
+model:
+  registry_name: "argus-safety-critic"
+  base_stage: "Production"  # Pull from MLflow Production stage
+
+mlflow:
+  tracking_uri: "${MLFLOW_TRACKING_URI}"
+  experiment_name: "argus/federated_rlhf"
+
+kubeflow:
+  pipeline_name: "argus-federated-rlhf-v1"
+  namespace: "argus-prod"
+  service_account: "argus-kubeflow-sa"
+
+evaluation:
+  # Metrics to compute after each round
+  metrics: ["safety_accuracy", "false_negative_rate", "kl_vs_reference"]
+  promotion_threshold:
+    safety_accuracy: 0.85
+    false_negative_rate: 0.10   # Max 10% unsafe outputs missed

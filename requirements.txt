@@ -1,0 +1,82 @@
+# ARGUS — Production Dependencies
+# =================================
+# Pin major versions. Use `pip install -r requirements.txt`
+# Do NOT pip install anything not in this file — update here first.
+
+# ── Core ML ──────────────────────────────────────────────────────────────────
+torch>=2.2.0,<3.0.0
+torchvision>=0.17.0
+torchaudio>=2.2.0
+transformers>=4.40.0
+accelerate>=0.29.0
+datasets>=2.19.0
+tokenizers>=0.19.0
+sentencepiece>=0.2.0
+
+# ── JAX / XLA (install CUDA version separately: pip install "jax[cuda12]") ──
+jax>=0.4.25
+jaxlib>=0.4.25
+flax>=0.8.0
+
+# ── RLHF / Fine-tuning ───────────────────────────────────────────────────────
+trl>=0.8.0
+peft>=0.10.0
+bitsandbytes>=0.43.0          # quantization
+deepspeed>=0.14.0
+
+# ── vLLM (serving) ────────────────────────────────────────────────────────────
+vllm>=0.4.0
+
+# ── Federated Learning ───────────────────────────────────────────────────────
+flwr[simulation]>=1.8.0
+opacus>=1.4.0                 # DP-SGD
+
+# ── Agentic / LangGraph ──────────────────────────────────────────────────────
+anthropic>=0.28.0
+langchain>=0.2.0
+langchain-anthropic>=0.1.15
+langgraph>=0.1.0
+
+# ── MLOps ─────────────────────────────────────────────────────────────────────
+mlflow>=2.13.0
+wandb>=0.17.0
+ray[train,data,serve]>=2.20.0
+
+# ── Cloud / Infrastructure ────────────────────────────────────────────────────
+google-cloud-spanner>=3.45.0
+google-cloud-bigquery>=3.22.0
+google-cloud-storage>=2.16.0
+confluent-kafka>=2.4.0        # Kafka client
+redis>=5.0.4
+aioredis>=2.0.1
+
+# ── API / Serving ─────────────────────────────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+grpcio>=1.63.0
+grpcio-tools>=1.63.0
+pydantic>=2.7.0
+pydantic-settings>=2.2.1
+
+# ── Observability ─────────────────────────────────────────────────────────────
+prometheus-client>=0.20.0
+structlog>=24.1.0
+opentelemetry-sdk>=1.24.0
+opentelemetry-exporter-gcp-trace>=1.6.0
+
+# ── Data / Numerical ─────────────────────────────────────────────────────────
+numpy>=1.26.0,<2.0.0
+pandas>=2.2.0
+scipy>=1.13.0
+scikit-learn>=1.4.0
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+aiohttp>=3.9.5
+httpx>=0.27.0
+tenacity>=8.3.0               # retry logic
+python-dotenv>=1.0.1
+pyyaml>=6.0.1
+omegaconf>=2.3.0
+rich>=13.7.1                  # CLI formatting
+typer>=0.12.3
+tqdm>=4.66.4

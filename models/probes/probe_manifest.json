@@ -1,0 +1,71 @@
+{
+  "model": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+  "quantization": "4-bit NF4",
+  "target_layers": [4, 8, 12, 16, 20, 24, 28, 31],
+  "hidden_size": 4096,
+  "probe_hidden_dim": 64,
+  "trained_on": "Colab T4 GPU",
+  "evaluation": "held-out 20% test split (3-way 60/20/20 stratified split, scaler fit on train only)",
+  "probes": {
+    "hallucination": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "auc": 1.0,
+      "accuracy": 1.0,
+      "p95_ms": 0.37,
+      "n_test": 24,
+      "val_acc": 0.9583,
+      "overfit_gap": -0.0417,
+      "dataset": "generation-eliciting prompts: invented entities, presuppositional framing, knowledge-cutoff traps, misattribution, false numerics, false consensus"
+    },
+    "jailbreak": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "auc": 1.0,
+      "accuracy": 1.0,
+      "p95_ms": 0.23,
+      "n_test": 24,
+      "val_acc": 0.9583,
+      "overfit_gap": -0.0417
+    },
+    "toxic_reasoning": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "auc": 1.0,
+      "accuracy": 1.0,
+      "p95_ms": 0.18,
+      "n_test": 24,
+      "val_acc": 1.0,
+      "overfit_gap": 0.0
+    },
+    "policy_violation": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "auc": 1.0,
+      "accuracy": 1.0,
+      "p95_ms": 0.15,
+      "n_test": 24,
+      "val_acc": 1.0,
+      "overfit_gap": 0.0
+    }
+  },
+  "sla": {
+    "precision_target": 0.85,
+    "precision_achieved": 1.0,
+    "precision_pass": true,
+    "f1_target": 0.82,
+    "f1_achieved": 1.0,
+    "f1_pass": true,
+    "auc_target": 0.9,
+    "auc_achieved": 1.0,
+    "auc_pass": true,
+    "latency_target_ms": 10,
+    "latency_achieved_ms": 0.37,
+    "latency_pass": true,
+    "all_pass": true
+  }
+}

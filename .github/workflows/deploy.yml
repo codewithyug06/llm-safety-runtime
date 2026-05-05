@@ -1,0 +1,149 @@
+name: ARGUS Deploy to GKE
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_version:
+        description: "MLflow model version to deploy"
+        required: true
+        default: "latest"
+      environment:
+        description: "Target environment"
+        required: true
+        default: "staging"
+        type: choice
+        options: [staging, production]
+
+  # Also trigger on MLflow model promotion webhook
+  repository_dispatch:
+    types: [model-promoted]
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GKE_CLUSTER: ${{ secrets.GKE_CLUSTER_NAME }}
+  GKE_REGION: us-central1
+  IMAGE_NAME: argus
+  REGISTRY: gcr.io
+
+jobs:
+  build-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker --quiet
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --tag "$REGISTRY/$GCP_PROJECT_ID/$IMAGE_NAME:${{ github.sha }}" \
+            --tag "$REGISTRY/$GCP_PROJECT_ID/$IMAGE_NAME:latest" \
+            --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+            --build-arg GIT_SHA=${{ github.sha }} \
+            .
+
+      - name: Push to Google Container Registry
+        run: |
+          docker push "$REGISTRY/$GCP_PROJECT_ID/$IMAGE_NAME:${{ github.sha }}"
+          docker push "$REGISTRY/$GCP_PROJECT_ID/$IMAGE_NAME:latest"
+
+      - name: Output image digest
+        id: image
+        run: |
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' \
+            "$REGISTRY/$GCP_PROJECT_ID/$IMAGE_NAME:${{ github.sha }}")
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build-push
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          location: ${{ env.GKE_REGION }}
+
+      - name: Update image in staging namespace
+        run: |
+          kubectl set image deployment/argus-safety-critic \
+            safety-critic="$REGISTRY/$GCP_PROJECT_ID/$IMAGE_NAME:${{ github.sha }}" \
+            -n argus-staging
+
+          kubectl set image deployment/argus-api \
+            api="$REGISTRY/$GCP_PROJECT_ID/$IMAGE_NAME:${{ github.sha }}" \
+            -n argus-staging
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/argus-safety-critic -n argus-staging --timeout=300s
+          kubectl rollout status deployment/argus-api -n argus-staging --timeout=300s
+
+      - name: Smoke test staging
+        run: |
+          STAGING_URL=$(kubectl get svc argus-api -n argus-staging -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          curl -f "http://$STAGING_URL:8080/health" || exit 1
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    environment: production
+    if: >
+      github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production' ||
+      github.event_name == 'repository_dispatch'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          location: ${{ env.GKE_REGION }}
+
+      - name: "Rolling update to production (canary 20%)"
+        run: |
+          # Update canary deployment first
+          kubectl set image deployment/argus-safety-critic-canary \
+            safety-critic="$REGISTRY/$GCP_PROJECT_ID/$IMAGE_NAME:${{ github.sha }}" \
+            -n argus-production
+
+          kubectl rollout status deployment/argus-safety-critic-canary \
+            -n argus-production --timeout=300s
+
+      - name: Full production rollout (after canary check)
+        run: |
+          kubectl set image deployment/argus-safety-critic \
+            safety-critic="$REGISTRY/$GCP_PROJECT_ID/$IMAGE_NAME:${{ github.sha }}" \
+            -n argus-production
+
+          kubectl set image deployment/argus-api \
+            api="$REGISTRY/$GCP_PROJECT_ID/$IMAGE_NAME:${{ github.sha }}" \
+            -n argus-production
+
+          kubectl rollout status deployment/argus-safety-critic -n argus-production --timeout=600s
+          kubectl rollout status deployment/argus-api -n argus-production --timeout=600s

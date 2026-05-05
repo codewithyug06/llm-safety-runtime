@@ -1,0 +1,63 @@
+{
+  "model": "PredictiveOracle (PatchTST)",
+  "trained_at": "2026-05-05T09:42:48Z",
+  "device": "cuda",
+  "hyperparameters": {
+    "epochs_run": 12,
+    "hidden_dim": 128,
+    "n_heads": 8,
+    "n_layers": 3,
+    "patch_len": 12,
+    "stride": 6,
+    "n_params": 624899
+  },
+  "dataset": {
+    "n_train": 1125,
+    "n_val": 225,
+    "n_test": 150,
+    "seq_len": 60,
+    "n_features": 9,
+    "fault_fraction": 0.4,
+    "fault_types": [
+      "prompt_injection",
+      "context_overflow",
+      "rate_spike",
+      "adversarial"
+    ]
+  },
+  "test_metrics": {
+    "30s": {
+      "loss": 0.076,
+      "precision": 1.0,
+      "recall": 0.9643,
+      "f1": 0.9818,
+      "accuracy": 0.9867
+    },
+    "60s": {
+      "loss": 0.076,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0
+    },
+    "90s": {
+      "loss": 0.076,
+      "precision": 1.0,
+      "recall": 0.9821,
+      "f1": 0.991,
+      "accuracy": 0.9933
+    }
+  },
+  "benchmark": {
+    "p50_ms": 2.829,
+    "p95_ms": 4.885,
+    "p99_ms": 7.181,
+    "sla_target_ms": 80.0,
+    "sla_pass": true
+  },
+  "conformal": {
+    "30": 0.9868,
+    "60": 0.9845,
+    "90": 0.9856
+  }
+}
