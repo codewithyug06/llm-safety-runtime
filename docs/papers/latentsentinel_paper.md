@@ -25,7 +25,7 @@ filtering, quarantine, rollback, and escalation with a median e2e latency of 47m
 Deployed on GKE with full observability, ARGUS demonstrates that production-grade LLM safety
 monitoring can be both comprehensive and low-overhead, adding <10ms p99 to monitored inference
 pipelines. Code, benchmarks, and pre-trained probes are released at
-https://github.com/argus-ai/argus.
+https://github.com/codewithyug06/llm-safety-runtime.
 
 ---
 
