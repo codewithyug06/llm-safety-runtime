@@ -1,17 +1,15 @@
-# ARGUS — PredictiveOracle Configuration
-# ========================================
-# Load via: from src.config import load_oracle_config
+
 
 model:
   hidden_dim: 128
   num_heads: 8
   num_layers: 3
-  patch_len: 12         # Timesteps per patch (PatchTST)
-  stride: 6             # Patch stride — 50% overlap
-  seq_len: 60           # 60-second rolling telemetry window (1 sample/sec)
-  num_features: 9       # See TELEMETRY_FEATURES in oracle.py
+  patch_len: 12        
+  stride: 6            
+  seq_len: 60         
+  num_features: 9      
   dropout: 0.1
-  forecast_horizons: [30, 60, 90]   # Seconds ahead to predict
+  forecast_horizons: [30, 60, 90]   
 
 training:
   output_dir: "models/oracle"
@@ -24,14 +22,14 @@ training:
   test_split: 0.10
 
 conformal:
-  calibration_alpha: 0.1    # 90% coverage prediction intervals
+  calibration_alpha: 0.1  
   min_calibration_samples: 200
 
 serving_latency_budget_ms: 80.0
 
 mlflow_experiment: "argus/predictive_oracle"
 
-alert_threshold: 0.65     # Failure probability above which to trigger remediation
+alert_threshold: 0.65   
 
 kafka_telemetry_topic: "argus.telemetry"
 kafka_predictions_topic: "argus.risk.predictions"
