@@ -1,21 +1,3 @@
-"""
-MOD-04: ARGUS Federated RLHF Client
-=====================================
-Flower NumPyClient that runs local DPO fine-tuning with DP-SGD on each
-participating node. Implements the standard Flower client interface:
-  - get_parameters() → current LoRA adapter weights as numpy arrays
-  - fit()            → one local DPO training round + DP-SGD noise
-  - evaluate()       → safety accuracy on local validation set
-
-Key design decisions:
-- Only LoRA adapter weights are exchanged (not full model) — ~50MB vs 14GB
-- Opacus DP-SGD applied per local round; epsilon tracked cumulatively
-- Local dataset never leaves the client node (federated privacy guarantee)
-- MLflow run created per client per round for traceability
-
-Run via: scripts/run_federated_round.py
-"""
-
 from __future__ import annotations
 
 import os
@@ -32,14 +14,6 @@ logger = structlog.get_logger(__name__)
 
 
 def _get_lora_params(model: Any) -> List[np.ndarray]:
-    """Extract LoRA adapter parameters as a flat list of numpy arrays.
-
-    Args:
-        model: PEFT model with LoRA adapters attached.
-
-    Returns:
-        List of numpy arrays, one per LoRA weight tensor.
-    """
     import torch
     params = []
     for name, param in model.named_parameters():
@@ -49,12 +23,6 @@ def _get_lora_params(model: Any) -> List[np.ndarray]:
 
 
 def _set_lora_params(model: Any, params: List[np.ndarray]) -> None:
-    """Load LoRA adapter parameters from a list of numpy arrays.
-
-    Args:
-        model: PEFT model with LoRA adapters.
-        params: List of numpy arrays matching the LoRA parameter order.
-    """
     import torch
     lora_params = [
         (name, p)
@@ -66,33 +34,6 @@ def _set_lora_params(model: Any, params: List[np.ndarray]) -> None:
 
 
 class ArgusFederatedClient:
-    """Flower-compatible federated learning client for DPO safety fine-tuning.
-
-    Implements the NumPyClient interface so Flower can orchestrate parameter
-    exchange between clients and the aggregation server.
-
-    Args:
-        client_id: Unique identifier for this client node.
-        model_name: HuggingFace base model to fine-tune.
-        train_data_path: Path to local JSONL DPO training data.
-        val_data_path: Path to local JSONL DPO validation data.
-        lora_r: LoRA rank (must match server config).
-        lora_alpha: LoRA scaling factor.
-        local_epochs: Number of local DPO epochs per federated round.
-        batch_size: Local training batch size.
-        learning_rate: AdamW learning rate.
-        dp_wrapper: Optional pre-configured DP-SGD wrapper.
-        device: Torch device string.
-
-    Example:
-        client = ArgusFederatedClient(
-            client_id="hospital_node_1",
-            train_data_path="data/local/train.jsonl",
-            val_data_path="data/local/val.jsonl",
-        )
-        fl.client.start_numpy_client(server_address="0.0.0.0:8080", client=client)
-    """
-
     def __init__(
         self,
         client_id: str = "client_0",
@@ -127,17 +68,8 @@ class ArgusFederatedClient:
         self._tokenizer: Optional[Any] = None
         self._round: int = 0
 
-    # ── Flower NumPyClient interface ───────────────────────────────────────────
-
     def get_parameters(self, config: Dict[str, Any]) -> List[np.ndarray]:
-        """Return current LoRA adapter weights as numpy arrays.
 
-        Args:
-            config: Server-provided config dict (may include round number).
-
-        Returns:
-            Flat list of numpy arrays representing LoRA parameters.
-        """
         if self._model is None:
             self._load_model()
         params = _get_lora_params(self._model)
@@ -154,29 +86,15 @@ class ArgusFederatedClient:
         parameters: List[np.ndarray],
         config: Dict[str, Any],
     ) -> Tuple[List[np.ndarray], int, Dict[str, Any]]:
-        """Run one local DPO training round with DP-SGD.
 
-        Args:
-            parameters: Global LoRA parameters from server aggregation.
-            config: Server config dict (round number, learning_rate override, etc.).
-
-        Returns:
-            Tuple of (updated_parameters, num_examples, metrics_dict).
-
-        Raises:
-            PrivacyBudgetExhaustedError: If cumulative ε ≥ 3.0.
-            FederatedRoundError: If local training loop fails.
-        """
         self._round = int(config.get("round", self._round + 1))
         logger.info("fit_start", client_id=self.client_id, round=self._round)
 
-        # Check privacy budget before training
         self._dp_wrapper.check_budget()
 
         if self._model is None:
             self._load_model()
 
-        # Load global parameters into local model
         _set_lora_params(self._model, parameters)
 
         try:
@@ -191,7 +109,6 @@ class ArgusFederatedClient:
                 required_clients=1,
             ) from exc
 
-        # Record privacy expenditure for this round
         try:
             delta_epsilon = self._dp_wrapper.record_round()
         except PrivacyBudgetExhaustedError:
@@ -227,15 +144,7 @@ class ArgusFederatedClient:
         parameters: List[np.ndarray],
         config: Dict[str, Any],
     ) -> Tuple[float, int, Dict[str, Any]]:
-        """Evaluate aggregated parameters on local validation set.
 
-        Args:
-            parameters: Aggregated LoRA parameters from server.
-            config: Server config dict.
-
-        Returns:
-            Tuple of (loss, num_examples, metrics_dict).
-        """
         if self._model is None:
             self._load_model()
 
@@ -259,10 +168,8 @@ class ArgusFederatedClient:
 
         return float(loss), num_examples, metrics
 
-    # ── Internal helpers ───────────────────────────────────────────────────────
 
     def _load_model(self) -> None:
-        """Load base model + LoRA adapters onto device."""
         try:
             from peft import LoraConfig, TaskType, get_peft_model
             from transformers import AutoTokenizer, LlavaNextForConditionalGeneration
@@ -297,14 +204,6 @@ class ArgusFederatedClient:
         logger.info("model_loaded", client_id=self.client_id)
 
     def _build_dataloader(self, data_path: Path) -> Any:
-        """Build a PyTorch DataLoader from a JSONL DPO dataset.
-
-        Args:
-            data_path: Path to JSONL file with {prompt, chosen, rejected}.
-
-        Returns:
-            PyTorch DataLoader.
-        """
         import json
 
         import torch
@@ -336,11 +235,6 @@ class ArgusFederatedClient:
         return DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
 
     def _run_local_training(self) -> Tuple[float, int]:
-        """Run local DPO training with DP-SGD noise injection.
-
-        Returns:
-            Tuple of (avg_train_loss, num_examples_trained).
-        """
         import torch
         from torch.optim import AdamW
 
@@ -350,7 +244,6 @@ class ArgusFederatedClient:
         )
         train_loader = self._build_dataloader(self.train_data_path)
 
-        # Attach Opacus DP-SGD
         private_model, private_optimizer, private_loader = self._dp_wrapper.attach(
             model=self._model,
             optimizer=optimizer,
@@ -364,7 +257,6 @@ class ArgusFederatedClient:
             for batch in private_loader:
                 private_optimizer.zero_grad()
 
-                # Tokenize chosen + rejected
                 chosen_enc = self._tokenizer(
                     batch["chosen"],
                     return_tensors="pt",
@@ -395,16 +287,11 @@ class ArgusFederatedClient:
                 total_loss += float(loss.item()) * len(batch["chosen"])
                 num_examples += len(batch["chosen"])
 
-        self._model = private_model  # update reference after DP wrapping
+        self._model = private_model 
         avg_loss = total_loss / max(num_examples, 1)
         return avg_loss, num_examples
 
     def _run_local_eval(self) -> Tuple[float, float, int]:
-        """Evaluate model on local validation set.
-
-        Returns:
-            Tuple of (val_loss, safety_accuracy, num_examples).
-        """
         import torch
 
         self._model.eval()
@@ -438,7 +325,6 @@ class ArgusFederatedClient:
                 log_ratio = chosen_out.loss - rejected_out.loss
                 loss = -torch.nn.functional.logsigmoid(beta * log_ratio)
 
-                # Accuracy: chosen loss < rejected loss means model prefers safe response
                 batch_correct = int((chosen_out.loss < rejected_out.loss).sum().item())
                 correct += batch_correct
                 total_loss += float(loss.item()) * len(batch["chosen"])
