@@ -1,20 +1,3 @@
-"""
-MOD-01: LatentSentinel Latency Benchmark
-==========================================
-Measures hook-to-signal latency for LatentSentinel under production-like load.
-Validates the <10ms p95 SLA on an 8B model.
-
-Run with:
-    python scripts/benchmark_sentinel.py
-    python scripts/benchmark_sentinel.py --model meta-llama/Meta-Llama-3.1-8B-Instruct \\
-        --num-requests 1000 --device cuda
-
-Output:
-    - Console table with p50/p95/p99 latency
-    - docs/benchmarks/sentinel_latency.md
-    - MLflow run with all metrics
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -43,11 +26,8 @@ from src.latent_sentinel.sentinel import (
 logger = structlog.get_logger(__name__)
 
 
-# ── Stub model for CPU testing without a real LLM ────────────────────────────
 
 class _BenchmarkInner(nn.Module):
-    """Inner model with .layers attribute — matches HuggingFace Llama layout expected
-    by HookManager._get_target_layers() which checks for model.model.layers."""
 
     def __init__(self, num_layers: int, hidden_dim: int) -> None:
         super().__init__()
@@ -62,19 +42,6 @@ class _BenchmarkInner(nn.Module):
 
 
 class BenchmarkTransformer(nn.Module):
-    """A minimal transformer that mimics Llama 3.1 8B output shapes.
-
-    Used when --stub-model is passed (CPU benchmarking, no GPU required).
-    Hidden dim 4096 matches Llama 3.1 8B.
-
-    The nested ``self.model.layers`` structure mirrors HuggingFace LLaMA so that
-    ``HookManager._get_target_layers()`` can discover the layers automatically.
-
-    Args:
-        num_layers: Number of transformer layers to simulate.
-        hidden_dim: Hidden dimension (4096 for 8B models).
-        seq_len: Sequence length per forward pass.
-    """
 
     def __init__(
         self,
@@ -86,18 +53,9 @@ class BenchmarkTransformer(nn.Module):
         self.num_layers = num_layers
         self.hidden_dim = hidden_dim
         self.seq_len = seq_len
-        # Nested so HookManager._get_target_layers() finds model.model.layers
         self.model = _BenchmarkInner(num_layers, hidden_dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Pass through all layers, emitting hooks on each.
-
-        Args:
-            x: Input tensor of shape (batch, seq_len, hidden_dim).
-
-        Returns:
-            Output tensor of same shape.
-        """
         return self.model(x)
 
 
@@ -106,21 +64,11 @@ def build_stub_probes(
     probe_dim: int = 128,
     input_dim: int = 4096,
 ) -> Dict[ProbeCategory, LinearResidualProbe]:
-    """Build untrained stub probes for benchmarking (no weights needed).
 
-    Args:
-        target_layers: Unused — kept for API compatibility.
-        probe_dim: Internal probe projection dimension (default 128).
-        input_dim: Hidden dimension of the model activations (e.g. 4096 for Llama 8B).
-                   Must match the model's residual stream width.
-
-    Returns:
-        Flat dict {ProbeCategory → probe} used by LatentSentinel.
-    """
     probes: Dict[ProbeCategory, LinearResidualProbe] = {}
     for category in ProbeCategory:
         probe = LinearResidualProbe(
-            hidden_dim=input_dim,   # activation width, NOT the probe's internal dim
+            hidden_dim=input_dim,   
             category=category,
             probe_dim=probe_dim,
         )
@@ -128,8 +76,6 @@ def build_stub_probes(
         probes[category] = probe
     return probes
 
-
-# ── Core benchmark loop ───────────────────────────────────────────────────────
 
 def run_benchmark(
     model: nn.Module,
@@ -141,27 +87,12 @@ def run_benchmark(
     device: str,
     warmup_requests: int = 50,
 ) -> Dict[str, float]:
-    """Run the latency benchmark.
 
-    Args:
-        model: Model with LatentSentinel hooks attached.
-        sentinel: The LatentSentinel instance being benchmarked.
-        num_requests: Total number of forward passes to time.
-        batch_size: Batch size per forward pass.
-        seq_len: Sequence length per batch.
-        hidden_dim: Hidden dimension of the model.
-        device: Torch device string.
-        warmup_requests: Number of warm-up forward passes (not timed).
-
-    Returns:
-        Dict with latency percentiles and throughput metrics.
-    """
     model.eval()
     latencies_ms: List[float] = []
 
     dummy_input = torch.randn(batch_size, seq_len, hidden_dim, device=device)
 
-    # Warm up (fill caches, JIT compile CUDA kernels)
     logger.info("benchmark_warmup", warmup_requests=warmup_requests)
     with torch.no_grad():
         for _ in range(warmup_requests):
@@ -170,7 +101,6 @@ def run_benchmark(
     if device.startswith("cuda"):
         torch.cuda.synchronize()
 
-    # Timed loop
     logger.info("benchmark_start", num_requests=num_requests)
     with torch.no_grad():
         for i in range(num_requests):
@@ -205,19 +135,9 @@ def run_benchmark(
     return results
 
 
-# ── Report generation ─────────────────────────────────────────────────────────
 
 def write_report(results: Dict[str, float], model_name: str, device: str) -> Path:
-    """Write a markdown benchmark report to docs/benchmarks/.
 
-    Args:
-        results: Latency metrics dict from run_benchmark().
-        model_name: Model identifier string.
-        device: Device used for benchmarking.
-
-    Returns:
-        Path to the generated markdown file.
-    """
     report_dir = Path("docs/benchmarks")
     report_dir.mkdir(parents=True, exist_ok=True)
     report_path = report_dir / "sentinel_latency.md"
@@ -254,9 +174,6 @@ ARGUS overhead {'does not impact' if results['sla_pass'] else 'exceeds the budge
     logger.info("benchmark_report_written", path=str(report_path))
     return report_path
 
-
-# ── Main ──────────────────────────────────────────────────────────────────────
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="Benchmark LatentSentinel hook latency")
     parser.add_argument(
@@ -280,12 +197,10 @@ def main() -> None:
 
     cfg = load_sentinel_config()
 
-    # Determine hidden_dim
     hidden_dim = 4096  # Llama 3.1 8B
     if "gemma" in args.model.lower():
         hidden_dim = 3072
 
-    # Build or load model
     if args.model == "stub":
         logger.info("using_stub_model", hidden_dim=hidden_dim)
         model = BenchmarkTransformer(
@@ -306,14 +221,12 @@ def main() -> None:
         )
         model.eval()
 
-    # Build stub probes
     stub_probes = build_stub_probes(
         target_layers=cfg.hooks.target_layers,
         probe_dim=args.probe_dim,
         input_dim=hidden_dim,
     )
 
-    # Build LatentSentinel and attach hooks
     sentinel = LatentSentinel(
         probes=stub_probes,
         target_layers=cfg.hooks.target_layers,
@@ -321,7 +234,6 @@ def main() -> None:
     )
     sentinel.monitor(model)
 
-    # Run benchmark
     results = run_benchmark(
         model=model,
         sentinel=sentinel,
@@ -333,7 +245,6 @@ def main() -> None:
         warmup_requests=args.warmup,
     )
 
-    # MLflow logging
     try:
         import mlflow
         mlflow.set_experiment(args.mlflow_experiment)
@@ -345,10 +256,8 @@ def main() -> None:
     except Exception as e:
         logger.warning("mlflow_logging_failed", error=str(e))
 
-    # Write report
     report_path = write_report(results, model_name=args.model, device=args.device)
 
-    # Print summary
     sla_status = "[PASS]" if results["sla_pass"] else "[FAIL]"
     print(f"\n=== LatentSentinel Benchmark Results ===")
     print(f"Model:       {args.model}")
