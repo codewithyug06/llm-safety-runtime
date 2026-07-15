@@ -1,22 +1,3 @@
-"""
-MOD-03: OmniSafetyCritic Latency Benchmark
-===========================================
-Benchmarks the safety critic serving pipeline (mock mode) to verify
-the p95 < 80ms SLA target without requiring a live GPU or trained model.
-
-Two benchmark modes:
-  1. Mock mode (default): scores are generated via a stub that mimics
-     the inference contract — no model load. Validates the overhead of
-     the scoring pipeline itself (serialisation, data transforms, etc.)
-  2. Live mode (--live): calls a real OmniSafetyCriticModel loaded
-     from --model-path. Requires a trained checkpoint.
-
-Run with:
-    python scripts/benchmark_critic.py
-    python scripts/benchmark_critic.py --n-calls 1000 --batch-sizes 1 4 8
-    python scripts/benchmark_critic.py --live --model-path models/safety_critic/final
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -40,12 +21,9 @@ from src.safety_critic.critic import (
 )
 
 logger = structlog.get_logger(__name__)
-
-# ── Benchmark targets ─────────────────────────────────────────────────────────
 LATENCY_P95_TARGET_MS = 80.0
 LATENCY_P50_TARGET_MS = 50.0
 
-# ── Test prompts covering all modalities ─────────────────────────────────────
 BENCHMARK_PROMPTS: List[Dict] = [
     {
         "content": "The capital of France is Paris and it has a rich cultural heritage.",
@@ -82,22 +60,13 @@ BENCHMARK_PROMPTS: List[Dict] = [
 ]
 
 
-# ── Mock model for pipeline overhead benchmarking ────────────────────────────
 
 class _MockCriticModel:
-    """Mimics OmniSafetyCriticModel.score() contract with zero compute.
-
-    Used to measure pipeline overhead (data prep, formatting, logging)
-    independently of model inference time.
-    """
-
     def is_loaded(self) -> bool:
         return True
 
     def score(self, critic_input: CriticInput) -> CriticOutput:
-        """Return a deterministic mock score based on content length."""
-        # Simulate a tiny fixed overhead (format + log)
-        time.sleep(0.0001)  # 0.1ms simulated encode overhead
+        time.sleep(0.0001)  
         score = min(1.0, len(critic_input.content) / 2000.0)
         return CriticOutput(
             safety_score=score,
@@ -107,23 +76,13 @@ class _MockCriticModel:
         )
 
 
-# ── Benchmarking helpers ──────────────────────────────────────────────────────
 
 def _run_single_benchmark(
     model: "_MockCriticModel | OmniSafetyCriticModel",
     n_calls: int,
     batch_size: int = 1,
 ) -> Dict[str, float]:
-    """Run latency benchmark for a single configuration.
-
-    Args:
-        model: Model with .score() interface.
-        n_calls: Total number of individual score() calls.
-        batch_size: Number of calls to group per "batch" iteration (simulates batch serving).
-
-    Returns:
-        Dict with p50, p95, p99, mean, max latencies in ms.
-    """
+  
     prompts = BENCHMARK_PROMPTS * (n_calls // len(BENCHMARK_PROMPTS) + 1)
     prompts = prompts[:n_calls]
 
@@ -162,15 +121,7 @@ def run_mock_benchmark(
     n_calls: int,
     batch_sizes: List[int],
 ) -> Dict[str, Dict[str, float]]:
-    """Run pipeline-overhead benchmark with mock model.
 
-    Args:
-        n_calls: Number of score() calls per batch_size.
-        batch_sizes: List of batch sizes to test.
-
-    Returns:
-        Results dict keyed by batch_size label.
-    """
     logger.info("mock_benchmark_start", n_calls=n_calls, batch_sizes=batch_sizes)
     model = _MockCriticModel()
     results: Dict[str, Dict[str, float]] = {}
@@ -189,17 +140,7 @@ def run_live_benchmark(
     batch_sizes: List[int],
     device: str = "cpu",
 ) -> Dict[str, Dict[str, float]]:
-    """Run latency benchmark with real OmniSafetyCriticModel.
 
-    Args:
-        model_path: Path to trained safety critic model.
-        n_calls: Number of calls per batch size.
-        batch_sizes: List of batch sizes to test.
-        device: Torch device.
-
-    Returns:
-        Results dict keyed by batch_size label.
-    """
     logger.info("live_benchmark_start", model_path=model_path, device=device)
     model = OmniSafetyCriticModel(model_name=model_path, device=device)
     model.load()
@@ -214,15 +155,7 @@ def run_live_benchmark(
 
 
 def print_results(results: Dict[str, Dict[str, float]], target_p95: float = LATENCY_P95_TARGET_MS) -> bool:
-    """Print formatted benchmark table.
 
-    Args:
-        results: Benchmark results dict.
-        target_p95: p95 latency target in ms.
-
-    Returns:
-        True if all configurations meet the p95 SLA.
-    """
     sep = "=" * 78
     print(f"\n{sep}")
     print("  OmniSafetyCritic Latency Benchmark")
@@ -259,14 +192,7 @@ def write_benchmark_report(
     output_path: Path,
     n_calls: int,
 ) -> None:
-    """Write a Markdown benchmark report.
 
-    Args:
-        results: Benchmark results.
-        mode: "mock" or "live".
-        output_path: Output .md file path.
-        n_calls: Number of calls per config.
-    """
     lines = [
         "# OmniSafetyCritic Latency Benchmark",
         "",
@@ -317,7 +243,6 @@ def write_benchmark_report(
     logger.info("benchmark_report_written", path=str(output_path))
 
 
-# ── CLI entry point ───────────────────────────────────────────────────────────
 
 def main() -> None:
     parser = argparse.ArgumentParser(
