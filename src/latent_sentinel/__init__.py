@@ -1,5 +1,3 @@
-"""MOD-01: LatentSentinel — Real-time activation monitoring."""
-
 from .sentinel import (
     ActivationBundle,
     HookManager,
