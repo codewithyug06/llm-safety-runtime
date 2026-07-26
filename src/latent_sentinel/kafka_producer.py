@@ -1,17 +1,3 @@
-"""
-MOD-01: SafetySignal Kafka Producer
-=====================================
-Serializes SafetySignal outputs from LatentSentinel and publishes them
-to the argus.safety.signals Kafka topic for downstream consumers
-(PredictiveOracle, AutonomousRemediator).
-
-Design decisions:
-- acks="1" (leader only): safety signals are time-critical; we accept
-  the small durability trade-off for sub-millisecond publish latency.
-- linger_ms=0: no batching delay — every signal is published immediately.
-- async produce with on_delivery callback for error logging.
-"""
-
 from __future__ import annotations
 
 import json
@@ -28,14 +14,6 @@ logger = structlog.get_logger(__name__)
 
 
 def _signal_to_dict(signal: SafetySignal) -> Dict[str, Any]:
-    """Convert a SafetySignal to a JSON-serializable dictionary.
-
-    Args:
-        signal: The SafetySignal to serialize.
-
-    Returns:
-        Dictionary safe for json.dumps().
-    """
     probe_scores = {
         cat.name: result.risk_score
         for cat, result in signal.probe_results.items()
@@ -52,26 +30,6 @@ def _signal_to_dict(signal: SafetySignal) -> Dict[str, Any]:
 
 
 class SafetySignalProducer:
-    """Publishes SafetySignal events to Kafka.
-
-    Wraps the confluent-kafka Producer with ARGUS-specific serialization
-    and error handling.
-
-    Args:
-        bootstrap_servers: Comma-separated Kafka broker addresses.
-        topic: Kafka topic to publish to.
-        producer_config: Additional confluent-kafka producer settings.
-        on_error: Optional callback invoked on delivery failure.
-
-    Example:
-        producer = SafetySignalProducer(
-            bootstrap_servers="kafka:9092",
-            topic="argus.safety.signals",
-        )
-        producer.publish(signal, agent_id="agent-42")
-        producer.flush()
-    """
-
     def __init__(
         self,
         bootstrap_servers: str,
@@ -93,18 +51,6 @@ class SafetySignalProducer:
         bootstrap_servers: str,
         extra_config: Dict[str, Any],
     ) -> Any:
-        """Create and return a confluent-kafka Producer instance.
-
-        Args:
-            bootstrap_servers: Kafka broker address string.
-            extra_config: Additional producer configuration keys.
-
-        Returns:
-            Configured Producer instance.
-
-        Raises:
-            KafkaConnectionError: If the producer cannot be initialized.
-        """
         try:
             from confluent_kafka import Producer
         except ImportError:
@@ -125,12 +71,6 @@ class SafetySignalProducer:
             ) from exc
 
     def _on_delivery(self, err: Any, msg: Any) -> None:
-        """Confluent-kafka delivery callback.
-
-        Args:
-            err: Delivery error (None on success).
-            msg: The delivered message object.
-        """
         if err is not None:
             logger.error(
                 "kafka_delivery_failed",
@@ -149,19 +89,8 @@ class SafetySignalProducer:
             )
 
     def publish(self, signal: SafetySignal, agent_id: str = "") -> None:
-        """Serialize and publish a SafetySignal to Kafka.
-
-        Only publishes signals with risk_level above SAFE to reduce noise.
-
-        Args:
-            signal: The SafetySignal from LatentSentinel.
-            agent_id: Optional identifier for the monitored agent.
-
-        Raises:
-            KafkaConnectionError: If the producer queue is full (buffer overflow).
-        """
         if signal.risk_level == RiskLevel.SAFE:
-            return  # Don't flood Kafka with safe signals
+            return 
 
         payload = _signal_to_dict(signal)
         if agent_id:
@@ -174,7 +103,6 @@ class SafetySignalProducer:
                 value=json.dumps(payload).encode("utf-8"),
                 on_delivery=self._on_delivery,
             )
-            # Non-blocking poll to handle delivery callbacks
             self._producer.poll(0)
         except BufferError as exc:
             raise KafkaConnectionError(
@@ -182,30 +110,17 @@ class SafetySignalProducer:
             ) from exc
 
     def publish_batch(self, signals: list[SafetySignal], agent_id: str = "") -> None:
-        """Publish multiple SafetySignals in one batch.
 
-        Args:
-            signals: List of SafetySignals to publish.
-            agent_id: Shared agent identifier for all signals.
-        """
         for signal in signals:
             self.publish(signal, agent_id=agent_id)
 
     def flush(self, timeout: float = 5.0) -> int:
-        """Wait for all outstanding produce requests to complete.
 
-        Args:
-            timeout: Maximum seconds to wait.
-
-        Returns:
-            Number of messages still in the local queue (0 on full success).
-        """
         remaining = self._producer.flush(timeout=timeout)
         if remaining > 0:
             logger.warning("kafka_flush_incomplete", remaining=remaining)
         return remaining
 
     def close(self) -> None:
-        """Flush and close the producer."""
         self.flush()
         logger.info("kafka_producer_closed", topic=self._topic)
