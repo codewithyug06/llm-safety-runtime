@@ -1,23 +1,6 @@
-"""
-ARGUS Custom Exception Hierarchy
-=================================
-All production errors must raise from this module.
-Handlers emit structured logs + increment Prometheus counters.
-"""
-
 from __future__ import annotations
 
-
-# ── Base ──────────────────────────────────────────────────────────────────────
-
 class ArgusBaseException(Exception):
-    """Root exception for all ARGUS errors.
-
-    Args:
-        message: Human-readable error description.
-        module: ARGUS module that raised the error (e.g. "latent_sentinel").
-    """
-
     def __init__(self, message: str, module: str = "argus") -> None:
         super().__init__(message)
         self.message = message
@@ -26,8 +9,6 @@ class ArgusBaseException(Exception):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(module={self.module!r}, message={self.message!r})"
 
-
-# ── MOD-01: LatentSentinel ────────────────────────────────────────────────────
 
 class LatentSentinelError(ArgusBaseException):
     """Base for all LatentSentinel errors."""
@@ -80,8 +61,6 @@ class SLAViolationError(LatentSentinelError):
         self.budget_ms = budget_ms
 
 
-# ── MOD-02: CausalInterventionEngine ─────────────────────────────────────────
-
 class CausalEngineError(ArgusBaseException):
     """Base for all CausalInterventionEngine errors."""
 
@@ -111,8 +90,6 @@ class CausalGraphNotFoundError(CausalEngineError):
     """Raised when no causal graph exists for the given model checkpoint."""
 
 
-# ── MOD-03: OmniSafetyCritic ─────────────────────────────────────────────────
-
 class SafetyCriticError(ArgusBaseException):
     """Base for all OmniSafetyCritic errors."""
 
@@ -139,8 +116,6 @@ class CriticInferenceTimeoutError(SafetyCriticError):
 class DatasetCurationError(SafetyCriticError):
     """Raised during DPO dataset construction if source data is malformed."""
 
-
-# ── MOD-04: FederatedRLHF ────────────────────────────────────────────────────
 
 class FederatedRLHFError(ArgusBaseException):
     """Base for all FederatedRLHF errors."""
@@ -191,8 +166,6 @@ class GradientAggregationError(FederatedRLHFError):
     """Raised when federated gradient aggregation produces NaN/Inf tensors."""
 
 
-# ── MOD-05: PredictiveOracle ─────────────────────────────────────────────────
-
 class PredictiveOracleError(ArgusBaseException):
     """Base for all PredictiveOracle errors."""
 
@@ -223,8 +196,6 @@ class InsufficientTelemetryError(PredictiveOracleError):
 class ConformalCalibrationError(PredictiveOracleError):
     """Raised when conformal calibration set is too small or contains invalid data."""
 
-
-# ── MOD-06: AutonomousRemediator ─────────────────────────────────────────────
 
 class RemediatorError(ArgusBaseException):
     """Base for all AutonomousRemediator errors."""
@@ -272,8 +243,6 @@ class RollbackError(RemediatorError):
 class EscalationError(RemediatorError):
     """Raised when human escalation notification (PagerDuty/Slack) fails."""
 
-
-# ── Infrastructure / Config ───────────────────────────────────────────────────
 
 class ConfigurationError(ArgusBaseException):
     """Raised when a required configuration value is missing or invalid.
