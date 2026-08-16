@@ -192,7 +192,11 @@ class OmniSafetyCriticModel(nn.Module):
         Raises:
             ImportError: If transformers is not installed.
         """
-        from transformers import AutoModelForCausalLM, AutoTokenizer
+        try:
+            from transformers import AutoModelForCausalLM, AutoTokenizer
+        except ImportError:
+            AutoModelForCausalLM = None  # type: ignore[assignment]
+            AutoTokenizer = None  # type: ignore[assignment]
 
         logger.info(
             "loading_safety_critic",
@@ -212,6 +216,8 @@ class OmniSafetyCriticModel(nn.Module):
             )
         else:
             # Text-only model (TinyLlama, Qwen2, Mistral, fine-tuned LoRA adapter, etc.)
+            if AutoModelForCausalLM is None or AutoTokenizer is None:
+                raise ImportError("Run: pip install transformers>=4.40.0")
             tokenizer = AutoTokenizer.from_pretrained(self.model_name)
             if tokenizer.pad_token is None:
                 tokenizer.pad_token = tokenizer.eos_token
