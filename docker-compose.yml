@@ -190,7 +190,7 @@ services:
     networks:
       - argus-net
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health | grep -q ok"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health | grep -q healthy || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
