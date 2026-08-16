@@ -49,7 +49,6 @@ from src.exceptions import RemediationError
 
 logger = structlog.get_logger(__name__)
 
-# ── State TypedDict ───────────────────────────────────────────────────────────
 
 class RemediationState(TypedDict):
     """Shared state flowing through the remediation graph.
@@ -83,15 +82,11 @@ class RemediationState(TypedDict):
     start_time: float
 
 
-# ── Thresholds ────────────────────────────────────────────────────────────────
-
 NO_ACTION_THRESHOLD: float = 0.40
 FILTER_THRESHOLD: float = 0.65
 QUARANTINE_THRESHOLD: float = 0.80
 ROLLBACK_THRESHOLD: float = 0.90
 
-
-# ── Node implementations ──────────────────────────────────────────────────────
 
 async def triage_node(state: RemediationState) -> RemediationState:
     """Log receipt of a remediation request and set start time.
@@ -154,7 +149,6 @@ async def filter_output_node(state: RemediationState, quarantine_store: RedisQua
     """
     agent_id = state["agent_id"]
     try:
-        # Set a short-lived filter flag (60s) — softer than full quarantine
         quarantine_store.quarantine(
             agent_id,
             ttl_s=60,
@@ -263,7 +257,6 @@ async def rollback_and_escalate_node(
     agent_id = state["agent_id"]
     details = []
 
-    # 1. Hard quarantine (600s)
     try:
         quarantine_store.quarantine(
             agent_id,
@@ -274,7 +267,6 @@ async def rollback_and_escalate_node(
     except Exception as exc:
         logger.error("rollback_quarantine_failed", error=str(exc))
 
-    # 2. Model rollback
     try:
         rollback_client.rollback(model_name, rollback_version)
         details.append(f"model_rolled_back(v{rollback_version})")
@@ -282,7 +274,6 @@ async def rollback_and_escalate_node(
         logger.error("model_rollback_failed", error=str(exc))
         details.append(f"rollback_failed:{exc}")
 
-    # 3. Slack + PagerDuty escalation
     msg = (
         f":rotating_light: *CRITICAL*: Agent `{agent_id}` safety score "
         f"{state['safety_score']:.3f} exceeds rollback threshold. "
@@ -351,8 +342,6 @@ async def audit_log_node(
     return {**state, "audit_record_id": record_id, "latency_ms": elapsed_ms}
 
 
-# ── Graph factory ─────────────────────────────────────────────────────────────
-
 def build_remediation_graph(
     quarantine_store: Optional[RedisQuarantineStore] = None,
     rollback_client: Optional[MLflowRollbackClient] = None,
@@ -386,7 +375,6 @@ def build_remediation_graph(
     except ImportError:
         raise ImportError("Run: pip install langgraph>=0.1.0")
 
-    # Use defaults if not provided
     qs = quarantine_store or RedisQuarantineStore()
     rc = rollback_client or MLflowRollbackClient()
     rl = rate_limiter or RateLimitAgent()
@@ -394,10 +382,8 @@ def build_remediation_graph(
     pd = pagerduty or PagerDutyNotifier()
     al = audit_logger or SpannerAuditLogger()
 
-    # Build graph
     graph = StateGraph(RemediationState)
 
-    # Add nodes — use async closures so dependency-injected async nodes are properly awaited.
     graph.add_node("triage", triage_node)
     graph.add_node("route", route_node)
 
@@ -422,11 +408,9 @@ def build_remediation_graph(
     graph.add_node("rollback_and_escalate", _rollback_and_escalate)
     graph.add_node("audit_log", _audit_log)
 
-    # Edges
     graph.set_entry_point("triage")
     graph.add_edge("triage", "route")
 
-    # Conditional routing based on action field
     graph.add_conditional_edges(
         "route",
         lambda s: s["action"],
@@ -439,7 +423,6 @@ def build_remediation_graph(
         },
     )
 
-    # All action nodes flow to audit_log
     for node in ["filter_output", "rate_limit", "quarantine", "rollback_and_escalate"]:
         graph.add_edge(node, "audit_log")
 

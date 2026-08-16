@@ -24,7 +24,6 @@ import structlog
 
 logger = structlog.get_logger(__name__)
 
-# Root of the project (one level above src/)
 _PROJECT_ROOT = Path(__file__).parent.parent
 _CONFIGS_DIR = _PROJECT_ROOT / "configs"
 
@@ -45,12 +44,9 @@ def _load_yaml(path: Path) -> Dict[str, Any]:
         raise FileNotFoundError(f"Config file not found: {path}")
     with path.open() as f:
         raw = f.read()
-    # Expand ${ENV_VAR} placeholders
     expanded = os.path.expandvars(raw)
     return yaml.safe_load(expanded)
 
-
-# ── MOD-01: LatentSentinel ────────────────────────────────────────────────────
 
 class ProbeConfig(BaseModel):
     enabled: bool = True
@@ -134,8 +130,6 @@ def load_sentinel_config() -> LatentSentinelConfig:
     return cfg
 
 
-# ── MOD-03: OmniSafetyCritic ─────────────────────────────────────────────────
-
 class LoRAConfig(BaseModel):
     r: int = 16
     lora_alpha: int = 32
@@ -195,8 +189,6 @@ def load_safety_critic_config() -> SafetyCriticConfig:
     return cfg
 
 
-# ── MOD-04: FederatedRLHF ────────────────────────────────────────────────────
-
 class FederatedCoordinatorConfig(BaseModel):
     strategy: str = "fedavg"
     num_rounds: int = 50
@@ -249,8 +241,6 @@ def load_federated_rlhf_config() -> FederatedRLHFConfig:
     return cfg
 
 
-# ── MOD-05: PredictiveOracle ─────────────────────────────────────────────────
-
 class OracleModelConfig(BaseModel):
     hidden_dim: int = 128
     num_heads: int = 8
@@ -275,7 +265,7 @@ class OracleTrainingConfig(BaseModel):
 
 
 class ConformalConfig(BaseModel):
-    calibration_alpha: float = 0.1   # 90% coverage
+    calibration_alpha: float = 0.1
     min_calibration_samples: int = 200
 
 
@@ -306,14 +296,11 @@ def load_oracle_config() -> PredictiveOracleConfig:
     return cfg
 
 
-# ── MOD-06: AutonomousRemediator ─────────────────────────────────────────────
-
 class ThresholdConfig(BaseModel):
     no_action_below: float = 0.40
     filter_output_below: float = 0.65
     quarantine_below: float = 0.80
     rollback_below: float = 0.90
-    # >= rollback_below → escalate_human
 
 
 class RemediatorServingConfig(BaseModel):
@@ -349,8 +336,6 @@ def load_remediator_config() -> AutonomousRemediatorConfig:
     return cfg
 
 
-# ── Environment settings (secrets via env vars) ───────────────────────────────
-
 class ArgusEnvSettings(BaseSettings):
     """Environment variable bindings for all secrets and external service URLs.
 
@@ -368,8 +353,11 @@ class ArgusEnvSettings(BaseSettings):
     spanner_database_id: str = Field(default="", alias="SPANNER_DATABASE_ID")
     hf_token: str = Field(default="", alias="HF_TOKEN")
     safety_critic_endpoint: str = Field(default="http://localhost:8001", alias="SAFETY_CRITIC_ENDPOINT")
+    argus_api_keys: str = Field(default="", alias="ARGUS_API_KEYS")
+    grafana_admin_user: str = Field(default="admin", alias="GRAFANA_ADMIN_USER")
+    grafana_admin_password: str = Field(default="argus", alias="GRAFANA_ADMIN_PASSWORD")
 
-    model_config = {"env_file": ".env", "populate_by_name": True}
+    model_config = {"env_file": ".env", "populate_by_name": True, "extra": "ignore"}
 
 
 def load_env_settings() -> ArgusEnvSettings:

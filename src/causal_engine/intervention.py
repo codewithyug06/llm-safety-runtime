@@ -32,8 +32,8 @@ try:
     _JAX_AVAILABLE = True
 except ImportError:
     jax = None
-    import numpy as jnp  # type: ignore
-    Array = Any  # type: ignore
+    import numpy as jnp
+    Array = Any
     _JAX_AVAILABLE = False
 
 import numpy as np
@@ -46,8 +46,6 @@ def _jit(fn: Callable) -> Callable:
 
 logger = structlog.get_logger(__name__)
 
-
-# ── Data types ────────────────────────────────────────────────────────────────
 
 @dataclass
 class HeadSignature:
@@ -166,8 +164,6 @@ class InterventionResult:
     success: bool
 
 
-# ── JAX-accelerated intervention functions ────────────────────────────────────
-
 @_jit
 def scale_attention_weights(
     attention_weights: Array,
@@ -195,8 +191,6 @@ def scale_attention_weights(
             scale_factors=jnp.array([1, 1, 1, 0.3, 1, 1, 1, 0.2, ...]),
         )
     """
-    # Apply scale factors only to masked heads
-    # scale_factors: (heads,) → (1, heads, 1, 1) for broadcasting
     effective_scales = jnp.where(head_mask, scale_factors, 1.0)
     effective_scales = effective_scales[None, :, None, None]
     return attention_weights * effective_scales
@@ -218,20 +212,17 @@ def compute_ablation_effect(
     Returns:
         Causal effect scalar: delta in probe logits caused by ablation.
     """
-    # Mean pool over all non-feature dimensions → shape (hidden,)
     orig_pooled = original_activations.mean(axis=tuple(range(original_activations.ndim - 1)))
     ablated_pooled = ablated_activations.mean(axis=tuple(range(ablated_activations.ndim - 1)))
 
-    # Project through probe — support both 1D (hidden,) and 2D (hidden, classes) weights
     if safety_probe_weights.ndim == 2:
         orig_logit = orig_pooled @ safety_probe_weights[:, 1]
         ablated_logit = ablated_pooled @ safety_probe_weights[:, 1]
     else:
-        # 1D weight vector: simple dot product
         orig_logit = orig_pooled @ safety_probe_weights
         ablated_logit = ablated_pooled @ safety_probe_weights
 
-    return ablated_logit - orig_logit  # positive = ablation makes it safer
+    return ablated_logit - orig_logit
 
 
 @_jit
@@ -260,17 +251,14 @@ def mean_activation_patch(
         (target_activations.shape[0], 1, target_activations.shape[2]),
     )
 
-    # Build index mask for head_idx
     if _JAX_AVAILABLE and jax is not None:
-        head_one_hot = jax.nn.one_hot(head_idx, num_heads)  # (heads,)
+        head_one_hot = jax.nn.one_hot(head_idx, num_heads)
     else:
         head_one_hot = np.eye(num_heads)[head_idx]
-    head_mask = head_one_hot[None, :, None]  # (1, heads, 1)
+    head_mask = head_one_hot[None, :, None]
 
     return jnp.where(head_mask, ref_mean_broadcast, target_activations)
 
-
-# ── Causal Scrubber (offline analysis) ───────────────────────────────────────
 
 class CausalScrubber:
     """Identifies causally responsible attention heads for unsafe behaviors.
@@ -303,7 +291,6 @@ class CausalScrubber:
         num_layers: int = 32,
         num_heads: int = 32,
         safety_probe_fn: Optional[Callable[[Array, str], float]] = None,
-        # Alternative interface used by tests / scripts
         model: Optional[Any] = None,
         probe_registry: Optional[Any] = None,
         target_layers: Optional[List[int]] = None,
@@ -342,10 +329,8 @@ class CausalScrubber:
                     if category not in probe_weights:
                         continue
 
-                    # Ablate this specific head
                     ablated = self._ablate_head(layer_acts, head_idx)
 
-                    # Compute causal effect
                     probe_w = jnp.array(probe_weights[category])
                     delta = float(compute_ablation_effect(
                         jnp.array(layer_acts),
@@ -360,8 +345,8 @@ class CausalScrubber:
                             behavior_category=category,
                             causal_effect=abs(delta),
                             ablation_delta=delta,
-                            patching_delta=0.0,  # filled by patching_study
-                            confidence=min(1.0, abs(delta) * 5),  # heuristic
+                            patching_delta=0.0,
+                            confidence=min(1.0, abs(delta) * 5),
                         ))
 
                         logger.info(
@@ -408,11 +393,9 @@ class CausalScrubber:
         if self._model is None or self._probe_registry is None:
             return []
 
-        # In production: collect activations by running prompts through model
-        # and call self.ablation_study(). Stub returns empty list for offline use.
         return []
 
-    def build_causal_graph(  # type: ignore[override]
+    def build_causal_graph(
         self,
         categories: List[str],
         prompts: Optional[List[str]] = None,
@@ -452,8 +435,6 @@ class CausalScrubber:
         return graph
 
 
-# ── Runtime Intervention Engine ───────────────────────────────────────────────
-
 class CausalInterventionEngine:
     """Applies real-time soft causal interventions based on the CausalGraph.
 
@@ -490,7 +471,6 @@ class CausalInterventionEngine:
         self._threshold = intervention_threshold
         self._default_scale = default_scale_factor
 
-        # Pre-compile JAX functions
         self._scale_fn = _jit(scale_attention_weights)
 
         logger.info(
@@ -521,9 +501,8 @@ class CausalInterventionEngine:
 
         for category in triggered_categories:
             unsafe_heads = self._graph.get_unsafe_heads(category, min_effect=0.1)
-            for head in unsafe_heads[:3]:  # top-3 per category
+            for head in unsafe_heads[:3]:
                 target_heads.add(head)
-                # More causal effect → stronger intervention
                 edge = next(
                     (e for e in self._graph.edges
                      if e.head == head and e.behavior_category == category),
@@ -558,7 +537,6 @@ class CausalInterventionEngine:
         if score < self._threshold:
             return None
 
-        # Derive triggered categories from probe_scores if available
         probe_scores = getattr(safety_signal, "probe_scores", {})
         triggered_categories = [
             str(cat) for cat, s in probe_scores.items() if float(s) >= 0.5
@@ -568,7 +546,7 @@ class CausalInterventionEngine:
         if spec is None:
             return None
 
-        risk_after = max(0.0, score - 0.3)  # heuristic estimate
+        risk_after = max(0.0, score - 0.3)
         return InterventionResult(
             spec=spec,
             risk_score_after=risk_after,

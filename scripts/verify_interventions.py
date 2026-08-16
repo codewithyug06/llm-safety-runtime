@@ -32,7 +32,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import structlog
 
-# Allow running from repo root
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.causal_engine.intervention import (
@@ -47,12 +46,9 @@ from src.exceptions import InterventionError
 
 logger = structlog.get_logger(__name__)
 
-# ── Synthetic graph construction ──────────────────────────────────────────────
 
-#: Categories used throughout the verification harness.
 CATEGORIES: List[str] = ["jailbreak", "hallucination", "toxic_reasoning", "policy_violation"]
 
-#: Random-state seed for reproducibility.
 _RNG = np.random.default_rng(seed=42)
 
 
@@ -71,7 +67,6 @@ def _make_synthetic_causal_graph(model_id: str = "llama-3.1-8b-stub") -> CausalG
     edges: List[CausalEdge] = []
     now_iso = datetime.now(tz=timezone.utc).isoformat()
 
-    # Layer/head assignments — spread across early, mid, and late layers
     _head_pool: List[Tuple[int, int]] = [
         (4, 2), (4, 7), (8, 0), (8, 5), (8, 11),
         (12, 3), (12, 8), (16, 1), (16, 6), (20, 4),
@@ -80,7 +75,7 @@ def _make_synthetic_causal_graph(model_id: str = "llama-3.1-8b-stub") -> CausalG
     pool_index = 0
 
     for category in CATEGORIES:
-        n_heads = _RNG.integers(3, 5)  # 3 or 4 heads per category
+        n_heads = _RNG.integers(3, 5)
         for _ in range(n_heads):
             layer_idx, head_idx = _head_pool[pool_index % len(_head_pool)]
             pool_index += 1
@@ -105,7 +100,6 @@ def _make_synthetic_causal_graph(model_id: str = "llama-3.1-8b-stub") -> CausalG
                 discovered_at=now_iso,
             ))
 
-    # Build top_k_heads dict
     top_k: Dict[str, List[HeadSignature]] = {}
     for category in CATEGORIES:
         cat_edges = sorted(
@@ -149,7 +143,6 @@ def _load_causal_graph_from_json(path: Path) -> CausalGraph:
 
     edges: List[CausalEdge] = []
     for raw in data.get("edges", []):
-        # Support both nested {"head": {...}} and flat {"layer_idx": ..., "head_idx": ...}
         if "head" in raw:
             head_raw = raw["head"]
             head = HeadSignature(
@@ -173,7 +166,6 @@ def _load_causal_graph_from_json(path: Path) -> CausalGraph:
             discovered_at=str(raw.get("discovered_at", "")),
         ))
 
-    # Rebuild top_k_heads from loaded edges
     categories = list({e.behavior_category for e in edges})
     top_k: Dict[str, List[HeadSignature]] = {}
     for category in categories:
@@ -191,8 +183,6 @@ def _load_causal_graph_from_json(path: Path) -> CausalGraph:
         version=int(data.get("version", 1)),
     )
 
-
-# ── Mock signal construction ──────────────────────────────────────────────────
 
 def _build_safe_signal(idx: int) -> SimpleNamespace:
     """Construct a mock 'safe' SafetySignal-like object.
@@ -241,8 +231,6 @@ def _build_unsafe_signal(idx: int) -> SimpleNamespace:
         request_id=f"unsafe-{idx:04d}",
     )
 
-
-# ── Verification logic ────────────────────────────────────────────────────────
 
 def _run_correctness_checks(
     engine: CausalInterventionEngine,
@@ -412,7 +400,7 @@ def _run_latency_benchmark(
         Tuple of (p50_ms, p95_ms, p99_ms).
     """
     latencies_ms: List[float] = []
-    categories = CATEGORIES[:2]  # jailbreak + hallucination
+    categories = CATEGORIES[:2]
 
     for i in range(n_iterations):
         risk_score = float(_RNG.uniform(0.7, 0.95))
@@ -430,8 +418,6 @@ def _run_latency_benchmark(
     p99 = float(np.percentile(arr, 99))
     return p50, p95, p99
 
-
-# ── Reporting helpers ─────────────────────────────────────────────────────────
 
 def _print_verification_table(rows: List[Dict[str, Any]]) -> None:
     """Print a formatted verification table to stdout.
@@ -503,8 +489,6 @@ def _print_sla_result(p50: float, p95: float, p99: float, budget_ms: float = 5.0
     print()
 
 
-# ── MLflow logging ────────────────────────────────────────────────────────────
-
 def _log_to_mlflow(
     unsafe_pass: int,
     unsafe_fail: int,
@@ -532,7 +516,7 @@ def _log_to_mlflow(
         threshold: Intervention threshold used in this run.
     """
     try:
-        import mlflow  # noqa: PLC0415
+        import mlflow
 
         total = unsafe_pass + unsafe_fail + safe_pass + safe_fail
         total_pass = unsafe_pass + safe_pass
@@ -566,15 +550,13 @@ def _log_to_mlflow(
             "mlflow_unavailable",
             hint="pip install mlflow — skipping MLflow logging",
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning(
             "mlflow_logging_failed",
             error=str(exc),
             hint="Check MLFLOW_TRACKING_URI environment variable",
         )
 
-
-# ── CLI entry point ───────────────────────────────────────────────────────────
 
 def _parse_args() -> argparse.Namespace:
     """Parse command-line arguments.
@@ -636,7 +618,6 @@ def main() -> int:
         assert_delta_min=args.assert_delta_min,
     )
 
-    # ── Build or load causal graph ─────────────────────────────────────────────
     graph_path: Path = args.causal_graph_path
     if graph_path.exists():
         graph = _load_causal_graph_from_json(graph_path)
@@ -657,14 +638,12 @@ def main() -> int:
         f"edges={len(graph.edges)}, version={graph.version}\n"
     )
 
-    # ── Initialise engine ──────────────────────────────────────────────────────
     engine = CausalInterventionEngine(
         causal_graph=graph,
         intervention_threshold=args.threshold,
         default_scale_factor=0.25,
     )
 
-    # ── Build mock signals ─────────────────────────────────────────────────────
     n_each = args.n_samples // 2
     safe_signals = [_build_safe_signal(i) for i in range(n_each)]
     unsafe_signals = [_build_unsafe_signal(i) for i in range(n_each)]
@@ -675,7 +654,6 @@ def main() -> int:
         n_unsafe=len(unsafe_signals),
     )
 
-    # ── Correctness verification ───────────────────────────────────────────────
     print("=== Intervention Verification Table ===\n")
     (
         unsafe_pass,
@@ -692,12 +670,10 @@ def main() -> int:
     _print_verification_table(rows)
     _print_summary(unsafe_pass, unsafe_fail, safe_pass, safe_fail)
 
-    # ── Latency benchmark ──────────────────────────────────────────────────────
     print("Running latency benchmark …")
     p50, p95, p99 = _run_latency_benchmark(engine, n_iterations=args.latency_iterations)
     _print_sla_result(p50, p95, p99, budget_ms=5.0)
 
-    # ── MLflow ─────────────────────────────────────────────────────────────────
     _log_to_mlflow(
         unsafe_pass=unsafe_pass,
         unsafe_fail=unsafe_fail,
@@ -710,7 +686,6 @@ def main() -> int:
         threshold=args.threshold,
     )
 
-    # ── Final assertions ───────────────────────────────────────────────────────
     all_correct = (unsafe_fail == 0) and (safe_fail == 0)
     sla_ok = p95 < 5.0
 

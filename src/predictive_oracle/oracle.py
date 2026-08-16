@@ -35,8 +35,6 @@ import structlog
 logger = structlog.get_logger(__name__)
 
 
-# ── Feature definitions ───────────────────────────────────────────────────────
-
 TELEMETRY_FEATURES = [
     "safety_score",
     "latency_ms",
@@ -48,10 +46,8 @@ TELEMETRY_FEATURES = [
     "queue_depth",
     "error_rate",
 ]
-N_FEATURES = len(TELEMETRY_FEATURES)  # 9
+N_FEATURES = len(TELEMETRY_FEATURES)
 
-
-# ── Data classes ──────────────────────────────────────────────────────────────
 
 @dataclass
 class TelemetryWindow:
@@ -64,7 +60,7 @@ class TelemetryWindow:
         window_len: Number of timesteps in window (e.g., 60 = 60 seconds at 1Hz).
     """
     agent_id: str
-    features: np.ndarray  # (window_len, N_FEATURES)
+    features: np.ndarray
     timestamps_ns: np.ndarray
     window_len: int = 60
 
@@ -75,7 +71,7 @@ class TelemetryWindow:
             Tensor of shape (1, N_FEATURES, window_len) — batch=1, channels=features.
         """
         t = torch.tensor(self.features, dtype=torch.float32)
-        return t.transpose(0, 1).unsqueeze(0).to(device)  # (1, N_FEATURES, window_len)
+        return t.transpose(0, 1).unsqueeze(0).to(device)
 
 
 @dataclass
@@ -101,8 +97,6 @@ class OraclePrediction:
     alert_triggered: bool = False
     latency_ms: float = 0.0
 
-
-# ── PatchTST-inspired model ───────────────────────────────────────────────────
 
 class TelemetryPatchEmbedding(nn.Module):
     """Patch-based embedding for multivariate telemetry time-series.
@@ -134,11 +128,8 @@ class TelemetryPatchEmbedding(nn.Module):
         self.n_features = n_features
         self.n_patches = (seq_len - patch_len) // stride + 1
 
-        # Shared patch projection: patch_len → d_model
         self.proj = nn.Linear(patch_len, d_model)
-        # Learnable channel embedding (one per feature)
         self.channel_embed = nn.Embedding(n_features, d_model)
-        # Learnable position embedding (one per patch position)
         self.pos_embed = nn.Embedding(self.n_patches, d_model)
         self.norm = nn.LayerNorm(d_model)
 
@@ -152,17 +143,12 @@ class TelemetryPatchEmbedding(nn.Module):
             Token embeddings of shape (batch, n_features * n_patches, d_model).
         """
         B, C, T = x.shape
-        # Unfold: (B, C, n_patches, patch_len)
         patches = x.unfold(dimension=2, size=self.patch_len, step=self.stride)
-        # Project patches: (B, C, n_patches, d_model)
         tok = self.proj(patches)
-        # Add position embedding
         pos_idx = torch.arange(self.n_patches, device=x.device)
         tok = tok + self.pos_embed(pos_idx).unsqueeze(0).unsqueeze(0)
-        # Add channel embedding
         ch_idx = torch.arange(C, device=x.device)
         tok = tok + self.channel_embed(ch_idx).unsqueeze(0).unsqueeze(2)
-        # Flatten channel × patch dims: (B, C * n_patches, d_model)
         tok = tok.reshape(B, C * self.n_patches, -1)
         return self.norm(tok)
 
@@ -211,7 +197,6 @@ class PredictiveOracleModel(nn.Module):
         self.n_features = n_features
         self.n_horizons = n_horizons
 
-        # Patch embedding: projects (B, n_features, seq_len) → (B, tokens, d_model)
         self.patch_embed = TelemetryPatchEmbedding(
             n_features=n_features,
             seq_len=seq_len,
@@ -220,7 +205,6 @@ class PredictiveOracleModel(nn.Module):
             d_model=d_model,
         )
 
-        # Transformer encoder (pre-norm for training stability)
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
             nhead=n_heads,
@@ -235,11 +219,9 @@ class PredictiveOracleModel(nn.Module):
             enable_nested_tensor=False,
         )
 
-        # CLS-style aggregation token (ViT-style)
         self.cls_token = nn.Parameter(torch.zeros(1, 1, d_model))
         nn.init.trunc_normal_(self.cls_token, std=0.02)
 
-        # Independent MLP head per horizon
         self.heads = nn.ModuleList([
             nn.Sequential(
                 nn.LayerNorm(d_model),
@@ -261,21 +243,14 @@ class PredictiveOracleModel(nn.Module):
             Logits tensor of shape (batch, n_horizons) — apply sigmoid for probs.
         """
         B = x.shape[0]
-        # Patch embed: (B, n_tokens, d_model)
         tokens = self.patch_embed(x)
-        # Prepend CLS token: (B, 1 + n_tokens, d_model)
         cls = self.cls_token.expand(B, -1, -1)
         tokens = torch.cat([cls, tokens], dim=1)
-        # Transformer: (B, 1 + n_tokens, d_model)
         encoded = self.transformer(tokens)
-        # Extract CLS output: (B, d_model)
         cls_out = encoded[:, 0, :]
-        # Independent head per horizon: list of (B, 1) → (B, n_horizons)
         logits = torch.cat([head(cls_out) for head in self.heads], dim=1)
-        return logits  # (B, n_horizons)
+        return logits
 
-
-# ── Conformal Prediction Calibration ─────────────────────────────────────────
 
 class ConformalCalibrator:
     """Calibrates model scores with distribution-free conformal prediction.
@@ -305,7 +280,6 @@ class ConformalCalibrator:
             cal_probs: Model probability predictions on calibration set.
             cal_labels: True binary labels (0 = no failure, 1 = failure).
         """
-        # Non-conformity score: 1 - p(true class)
         scores = np.where(cal_labels == 1, 1 - cal_probs, cal_probs)
 
         n = len(scores)
@@ -339,8 +313,6 @@ class ConformalCalibrator:
         upper = min(1.0, prob + self._q_hat)
         return lower, upper
 
-
-# ── Oracle: Top-level interface ───────────────────────────────────────────────
 
 class PredictiveOracle:
     """Top-level interface for MOD-05.
@@ -397,13 +369,12 @@ class PredictiveOracle:
         t0 = _time.monotonic_ns()
 
         x = window.to_tensor(self._device)
-        logits = self._model(x)  # (1, n_horizons)
+        logits = self._model(x)
         probs = logits.sigmoid().squeeze(0).cpu().numpy()
 
         horizon_idx = self.HORIZONS.index(primary_horizon) if primary_horizon in self.HORIZONS else 1
         prob = float(probs[horizon_idx])
 
-        # Apply conformal calibration
         calibrator = self._calibrators.get(primary_horizon)
         if calibrator:
             lower, upper = calibrator.predict_interval(prob)

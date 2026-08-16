@@ -73,7 +73,6 @@ def _start_client(
 
     logger.info("client_connecting", client_id=client_id, server=server_address)
 
-    # Wrap in Flower NumPyClient adapter
     flower_client = _FlowerClientAdapter(client)
 
     fl.client.start_numpy_client(
@@ -126,7 +125,6 @@ def main() -> None:
         epsilon_budget=args.epsilon_budget,
     )
 
-    # Start server in a background thread (with a short delay to allow binding)
     server = ArgusFederatedServer(
         server_address=args.server_address,
         num_rounds=args.num_rounds,
@@ -139,10 +137,8 @@ def main() -> None:
     server_thread = threading.Thread(target=server.start, daemon=True)
     server_thread.start()
 
-    # Give the server a moment to bind
     time.sleep(2.0)
 
-    # Start clients in parallel threads
     client_threads: List[threading.Thread] = []
     for i in range(args.num_clients):
         t = threading.Thread(
@@ -161,14 +157,11 @@ def main() -> None:
         )
         client_threads.append(t)
         t.start()
-        # Stagger client starts slightly
         time.sleep(0.5)
 
-    # Wait for all clients to complete
     for t in client_threads:
         t.join(timeout=3600)
 
-    # Wait for server to finish
     server_thread.join(timeout=60)
 
     logger.info("federated_round_complete", rounds=args.num_rounds)

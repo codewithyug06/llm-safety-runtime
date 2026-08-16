@@ -26,8 +26,6 @@ from src.safety_critic.critic import (
 )
 
 
-# ── Fixtures ──────────────────────────────────────────────────────────────────
-
 @pytest.fixture()
 def text_input() -> CriticInput:
     return CriticInput(
@@ -70,8 +68,6 @@ def sample_jsonl(tmp_path: Path) -> Path:
     return path
 
 
-# ── TestContentModality ───────────────────────────────────────────────────────
-
 class TestContentModality:
     def test_all_values_accessible(self) -> None:
         assert ContentModality.TEXT.value == "text"
@@ -87,8 +83,6 @@ class TestContentModality:
         with pytest.raises(ValueError):
             ContentModality("unknown_modality")
 
-
-# ── TestCriticInput ───────────────────────────────────────────────────────────
 
 class TestCriticInput:
     def test_default_modality_is_text(self) -> None:
@@ -128,8 +122,6 @@ class TestCriticInput:
         prompt = text_input.to_prompt()
         assert "0.0" in prompt and "1.0" in prompt
 
-
-# ── TestCriticOutput ──────────────────────────────────────────────────────────
 
 class TestCriticOutput:
     def test_is_unsafe_threshold_at_0_6(self) -> None:
@@ -173,8 +165,6 @@ class TestCriticOutput:
         assert out.latency_ms >= 0.0
 
 
-# ── TestParseSafetyScore ──────────────────────────────────────────────────────
-
 class TestParseSafetyScore:
     def test_plain_float(self) -> None:
         assert _parse_safety_score("0.75") == pytest.approx(0.75)
@@ -190,7 +180,6 @@ class TestParseSafetyScore:
         assert score == pytest.approx(0.82)
 
     def test_score_clamped_below_zero(self) -> None:
-        # Should not happen normally but defense-in-depth
         score = _parse_safety_score("0.0")
         assert score >= 0.0
 
@@ -210,8 +199,6 @@ class TestParseSafetyScore:
         score = _parse_safety_score("0.3 and also 0.9")
         assert score == pytest.approx(0.3)
 
-
-# ── TestOmniSafetyCriticModel ─────────────────────────────────────────────────
 
 class TestOmniSafetyCriticModel:
     def test_is_loaded_false_before_load(self) -> None:
@@ -266,8 +253,6 @@ class TestOmniSafetyCriticModel:
         assert out.modality == ContentModality.TEXT
 
 
-# ── TestSafetyCriticDataset ───────────────────────────────────────────────────
-
 class TestSafetyCriticDataset:
     def test_load_correct_length(self, sample_jsonl: Path) -> None:
         mock_tokenizer = MagicMock()
@@ -312,8 +297,6 @@ class TestSafetyCriticDataset:
         ds = SafetyCriticDataset(data_path=path, tokenizer=mock_tokenizer)
         assert len(ds) == 2
 
-
-# ── TestOmniSafetyCriticClient ────────────────────────────────────────────────
 
 class TestOmniSafetyCriticClient:
     def test_init_strips_trailing_slash(self) -> None:

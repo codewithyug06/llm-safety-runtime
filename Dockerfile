@@ -1,5 +1,3 @@
-# ── ARGUS: LLM Safety Runtime Dockerfile ─────────────────────────────────────
-# Multi-stage production container for ARGUS Safety Gateway and Monitoring Engine
 
 FROM python:3.11-slim AS builder
 
@@ -11,11 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Install PyTorch CPU first to avoid heavy CUDA wheels in CPU containers
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 
-# Install core runtime dependencies
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir \
     fastapi \
@@ -44,7 +40,6 @@ RUN pip install --no-cache-dir \
     typer \
     tqdm
 
-# ── Final Runtime Stage ──────────────────────────────────────────────────────
 FROM python:3.11-slim AS runner
 
 WORKDIR /app
@@ -54,14 +49,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy installed python dependencies from builder
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Create unprivileged user for security
 RUN useradd -m -u 1000 argus && chown -R argus:argus /app
 
-# Copy application codebase
 COPY --chown=argus:argus src/ /app/src/
 COPY --chown=argus:argus configs/ /app/configs/
 COPY --chown=argus:argus pyproject.toml /app/pyproject.toml

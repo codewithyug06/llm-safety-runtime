@@ -35,7 +35,6 @@ from src.safety_critic.critic import (
 
 logger = structlog.get_logger(__name__)
 
-# ── Global model state (loaded once on startup) ───────────────────────────────
 
 _critic_model: Optional[OmniSafetyCriticModel] = None
 _cfg = None
@@ -62,8 +61,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     _critic_model = None
 
 
-# ── FastAPI App ───────────────────────────────────────────────────────────────
-
 app = FastAPI(
     title="ARGUS OmniSafetyCritic",
     description="Multimodal safety scoring API for production LLM monitoring",
@@ -78,8 +75,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# ── Request / Response Models ─────────────────────────────────────────────────
 
 class ScoreRequest(BaseModel):
     """Single-input scoring request."""
@@ -129,8 +124,6 @@ class HealthResponse(BaseModel):
     model_loaded: bool
     model_name: str
 
-
-# ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @app.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:

@@ -51,14 +51,12 @@ class ArgusFedAvgStrategy:
                 required_clients=self.min_fit_clients,
             )
 
-        # Extract parameters and weights
         weights_results = []
         for client_proxy, fit_res in results:
             params = self._parameters_to_ndarrays(fit_res.parameters)
             num_examples = fit_res.num_examples
             weights_results.append((params, num_examples))
 
-        # Weighted average
         try:
             aggregated = self._weighted_average(weights_results)
         except Exception as exc:
@@ -188,7 +186,6 @@ class ArgusFedAvgStrategy:
             )
         except Exception as exc:
             logger.warning("mlflow_registration_failed", round=server_round, error=str(exc))
-
 
 
 class ArgusFederatedServer:

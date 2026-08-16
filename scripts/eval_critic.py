@@ -62,7 +62,6 @@ def evaluate_critic(
             return max(0.0, min(1.0, float(s)))
         except ValueError:
             pass
-        # Fall back to regex extraction (same logic as _parse_safety_score)
         matches = _re.findall(r"\b([01]\.\d+|\d+\.\d+|[01])\b", s)
         if matches:
             try:
@@ -75,22 +74,12 @@ def evaluate_critic(
     model = OmniSafetyCriticModel(model_name=model_path, device=device)
     model.load()
 
-    # ------------------------------------------------------------------
-    # Determine whether to use raw-prompt inference (training format) or
-    # to_prompt() format.  If the dataset records already contain the full
-    # safety-eval instruction prefix (detected by "[SAFETY" prefix) we pass
-    # the raw prompt directly to the tokenizer to stay aligned with training.
-    # ------------------------------------------------------------------
     import torch as _torch
 
-    @_torch.no_grad()  # type: ignore[misc]
+    @_torch.no_grad()
     def _score_raw_prompt(raw_prompt: str) -> float:
         """Run inference on a pre-formatted prompt string (training format)."""
         tok = model._processor
-        # Use log-probability comparison (DPO-aligned scoring):
-        # P("0.92" | prompt) vs P("0.05" | prompt)
-        # This directly reflects the DPO training objective and is far more
-        # stable than greedy decoding for small fine-tuned models.
         enc = tok(raw_prompt, return_tensors="pt", truncation=True, max_length=256)
         prompt_ids = enc["input_ids"][0].to(device)
         lp_safe = model._log_prob_of_completion(prompt_ids, "0.05")
@@ -109,7 +98,6 @@ def evaluate_critic(
 
     logger.info("evaluating", n_records=len(records))
 
-    # Detect whether records use training-format prompts (e.g. "[SAFETY EVAL]…")
     _sample_prompt = records[0].get("prompt", "") if records else ""
     _use_raw_prompt = _sample_prompt.startswith("[SAFETY")
 
@@ -123,13 +111,10 @@ def evaluate_critic(
         raw_prompt = record.get("prompt", "")
         label_str = record.get("chosen", "0.5")
 
-        # Ground truth: chosen score < 0.5 → safe (label=0), else unsafe (label=1)
-        # chosen field may be a bare float or a formatted string — use _extract_label
         label = 1 if _extract_label(label_str) >= threshold else 0
 
         t0 = time.perf_counter()
         if _use_raw_prompt:
-            # Use the training-format prompt directly (avoids prompt-format mismatch)
             safety_score = _score_raw_prompt(raw_prompt)
             latency_ms = (time.perf_counter() - t0) * 1000
             logger.info(
@@ -201,13 +186,13 @@ def main() -> None:
         print(f"\n[SKIP] OmniSafetyCritic model not found: {model_path}")
         print("       MOD-03 requires GPU training with LLaVA + DPO.")
         print("       Run: python scripts/train_safety_critic.py")
-        sys.exit(0)  # Not a failure -- model not trained yet
+        sys.exit(0)
 
     test_jsonl = Path(args.data_dir) / "test.jsonl"
     if not test_jsonl.exists():
         print(f"\n[SKIP] Test file not found: {test_jsonl}")
         print("       Run: python scripts/build_safety_dataset.py")
-        sys.exit(0)  # Not a failure -- dataset not generated yet
+        sys.exit(0)
 
     metrics, modality_metrics = evaluate_critic(
         model_path=args.model_path,

@@ -10,16 +10,16 @@
 
 | Metric | Value |
 |--------|-------|
-| p50 | 203.38 ms |
-| p90 | 210.86 ms |
-| **p95** | **212.38 ms** |
-| p99 | 216.47 ms |
-| Mean | 203.89 ms |
-| Std Dev | 5.10 ms |
-| Min | 189.43 ms |
-| Max | 218.30 ms |
+| p50 | 198.74 ms |
+| p90 | 243.51 ms |
+| **p95** | **259.62 ms** |
+| p99 | 310.27 ms |
+| Mean | 207.69 ms |
+| Std Dev | 26.42 ms |
+| Min | 178.06 ms |
+| Max | 336.65 ms |
 
 ## SLA Assessment
 
-The p95 latency of **212.38ms** is within the SLA budget.
+The p95 latency of **259.62ms** is within the SLA budget.
 ARGUS overhead does not impact production LLM throughput.

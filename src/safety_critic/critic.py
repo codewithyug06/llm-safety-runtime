@@ -28,18 +28,14 @@ import torch.nn as nn
 
 from src.exceptions import CriticInferenceTimeoutError, CriticServingError
 
-# Module-level imports for patchability in tests.
-# Loaded lazily so the module works without transformers installed.
 try:
     from transformers import AutoProcessor, LlavaNextForConditionalGeneration
-except ImportError:  # pragma: no cover
-    AutoProcessor = None  # type: ignore[assignment,misc]
-    LlavaNextForConditionalGeneration = None  # type: ignore[assignment,misc]
+except ImportError:
+    AutoProcessor = None
+    LlavaNextForConditionalGeneration = None
 
 logger = structlog.get_logger(__name__)
 
-
-# ── Enums & Data types ────────────────────────────────────────────────────────
 
 class ContentModality(Enum):
     TEXT = "text"
@@ -145,8 +141,6 @@ class CriticOutput:
         return "clearly_unsafe"
 
 
-# ── Offline model (for training / fine-tuning) ────────────────────────────────
-
 class OmniSafetyCriticModel(nn.Module):
     """Wraps LLaVA-1.6 for DPO fine-tuning as a safety evaluator.
 
@@ -195,8 +189,8 @@ class OmniSafetyCriticModel(nn.Module):
         try:
             from transformers import AutoModelForCausalLM, AutoTokenizer
         except ImportError:
-            AutoModelForCausalLM = None  # type: ignore[assignment]
-            AutoTokenizer = None  # type: ignore[assignment]
+            AutoModelForCausalLM = None
+            AutoTokenizer = None
 
         logger.info(
             "loading_safety_critic",
@@ -215,13 +209,12 @@ class OmniSafetyCriticModel(nn.Module):
                 low_cpu_mem_usage=True,
             )
         else:
-            # Text-only model (TinyLlama, Qwen2, Mistral, fine-tuned LoRA adapter, etc.)
             if AutoModelForCausalLM is None or AutoTokenizer is None:
                 raise ImportError("Run: pip install transformers>=4.40.0")
             tokenizer = AutoTokenizer.from_pretrained(self.model_name)
             if tokenizer.pad_token is None:
                 tokenizer.pad_token = tokenizer.eos_token
-            self._processor = tokenizer  # reuse _processor slot for tokenizer
+            self._processor = tokenizer
             _dtype = torch.float32 if self.device == "cpu" else self.dtype
             base_model = AutoModelForCausalLM.from_pretrained(
                 self.model_name,
@@ -262,7 +255,7 @@ class OmniSafetyCriticModel(nn.Module):
         Returns:
             Mean token log-probability (negative float; higher = more likely).
         """
-        import torch.nn.functional as F  # local import to keep module light
+        import torch.nn.functional as F
 
         comp_ids = self._processor(completion, return_tensors="pt", add_special_tokens=False)
         if hasattr(comp_ids, "to"):
@@ -271,13 +264,11 @@ class OmniSafetyCriticModel(nn.Module):
 
         full_ids = torch.cat([prompt_ids, comp_token_ids], dim=0).unsqueeze(0)
         with torch.no_grad():
-            logits = self._model(full_ids).logits  # (1, seq_len, vocab)
+            logits = self._model(full_ids).logits
 
         n_prompt = prompt_ids.shape[0]
-        # logits at position i predict token i+1; we want the logits just
-        # before each completion token (positions n_prompt-1 … n_prompt+n_comp-2)
         n_comp = comp_token_ids.shape[0]
-        pred_logits = logits[0, n_prompt - 1: n_prompt + n_comp - 1, :]  # (n_comp, V)
+        pred_logits = logits[0, n_prompt - 1: n_prompt + n_comp - 1, :]
         log_probs = F.log_softmax(pred_logits, dim=-1)
         token_log_probs = log_probs[
             torch.arange(n_comp, device=self.device), comp_token_ids
@@ -310,7 +301,6 @@ class OmniSafetyCriticModel(nn.Module):
         prompt = critic_input.to_prompt()
 
         raw_inputs = self._processor(text=prompt, return_tensors="pt")
-        # Handle both BatchEncoding (.to() method) and plain dicts (from mocks/tests)
         if hasattr(raw_inputs, "to"):
             inputs = raw_inputs.to(self.device)
         else:
@@ -320,17 +310,7 @@ class OmniSafetyCriticModel(nn.Module):
                 for k, v in raw_inputs.items()
             }
 
-        # ── Scoring strategy ───────────────────────────────────────────────
-        # For non-LLaVA (text-only) DPO-trained models we compare log-
-        # probabilities of the safe label ("0.05") vs unsafe label ("0.92").
-        # This uses the DPO training signal directly and is far more stable
-        # than greedy decoding for small models.
-        # For LLaVA (multimodal) models keep the original generate path.
         if not self._is_llava_model():
-            # Digit-after-decimal scoring: append "Safety score: 0." and compare
-            # P(next="9") vs P(next="0") at that position.
-            # "0.9x" → unsafe token sequence; "0.0x" → safe token sequence.
-            # Avoids first-token collision where "0.05" and "0.92" share token "0".
             import math
             import torch.nn.functional as F
 
@@ -348,12 +328,11 @@ class OmniSafetyCriticModel(nn.Module):
             conditioned_ids = torch.cat([prompt_ids_raw, suffix_token_ids], dim=1)
 
             with torch.no_grad():
-                logits = self._model(conditioned_ids).logits  # (1, seq, vocab)
+                logits = self._model(conditioned_ids).logits
 
-            next_logits = logits[0, -1, :]  # next token after "0."
+            next_logits = logits[0, -1, :]
             log_probs = F.log_softmax(next_logits.float(), dim=-1)
 
-            # Token IDs for "0" (safe → 0.0x) and "9" (unsafe → 0.9x)
             tok_0 = self._processor("0", add_special_tokens=False)["input_ids"][0]
             tok_9 = self._processor("9", add_special_tokens=False)["input_ids"][0]
             lp_safe   = log_probs[tok_0].item()
@@ -362,7 +341,6 @@ class OmniSafetyCriticModel(nn.Module):
             raw_logit = lp_unsafe - lp_safe
             safety_score = 1.0 / (1.0 + math.exp(-raw_logit))
         else:
-            # LLaVA: keep original generate + parse path
             outputs = self._model.generate(
                 **inputs,
                 max_new_tokens=8,
@@ -390,8 +368,6 @@ class OmniSafetyCriticModel(nn.Module):
             model_version=self.model_name,
         )
 
-
-# ── Serving client (hits vLLM endpoint) ───────────────────────────────────────
 
 class OmniSafetyCriticClient:
     """HTTP client for the vLLM-served OmniSafetyCritic.
@@ -491,8 +467,6 @@ class OmniSafetyCriticClient:
         return await asyncio.gather(*tasks)
 
 
-# ── Dataset for DPO training ──────────────────────────────────────────────────
-
 class SafetyCriticDataset:
     """Loads and formats multimodal DPO preference pairs for TRL training.
 
@@ -551,8 +525,6 @@ class SafetyCriticDataset:
         }
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
 def _parse_safety_score(response: str) -> float:
     """Parse a float safety score from model response text.
 
@@ -573,7 +545,6 @@ def _parse_safety_score(response: str) -> float:
             return max(0.0, min(1.0, score))
         except ValueError:
             pass
-    # Sanitize response for logging — strip non-ASCII so cp1252 consoles don't crash
     safe_snippet = response[:50].encode("ascii", errors="replace").decode("ascii")
     logger.warning("score_parse_failed", response=safe_snippet)
-    return 0.5  # Default borderline
+    return 0.5

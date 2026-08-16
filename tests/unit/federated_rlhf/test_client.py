@@ -21,8 +21,6 @@ from src.federated_rlhf.privacy import (
 from src.federated_rlhf.server import ArgusFedAvgStrategy
 
 
-# ── Fixtures ──────────────────────────────────────────────────────────────────
-
 @pytest.fixture()
 def dp_wrapper() -> DPSGDOpacusWrapper:
     return DPSGDOpacusWrapper(epsilon_budget=3.0, delta=1e-5)
@@ -55,8 +53,6 @@ def _make_eval_result(loss: float, num_examples: int, metrics: dict) -> MagicMoc
     return res
 
 
-# ── TestPrivacyAccountingState ────────────────────────────────────────────────
-
 class TestPrivacyAccountingState:
     def test_initial_epsilon_spent_zero(self) -> None:
         state = PrivacyAccountingState()
@@ -87,8 +83,6 @@ class TestPrivacyAccountingState:
         assert state.delta == DEFAULT_DELTA
 
 
-# ── TestDPSGDOpacusWrapper ────────────────────────────────────────────────────
-
 class TestDPSGDOpacusWrapper:
     def test_init_defaults(self, dp_wrapper: DPSGDOpacusWrapper) -> None:
         assert dp_wrapper.epsilon_budget == pytest.approx(3.0)
@@ -96,7 +90,7 @@ class TestDPSGDOpacusWrapper:
         assert dp_wrapper._attached is False
 
     def test_check_budget_passes_initially(self, dp_wrapper: DPSGDOpacusWrapper) -> None:
-        dp_wrapper.check_budget()  # Should not raise
+        dp_wrapper.check_budget()
 
     def test_check_budget_raises_when_exhausted(self) -> None:
         wrapper = DPSGDOpacusWrapper(epsilon_budget=0.5)
@@ -130,7 +124,7 @@ class TestDPSGDOpacusWrapper:
         wrapper = DPSGDOpacusWrapper(epsilon_budget=1.0)
         wrapper._attached = True
         mock_engine = MagicMock()
-        mock_engine.get_epsilon.return_value = 1.5  # Over budget
+        mock_engine.get_epsilon.return_value = 1.5
         wrapper._privacy_engine = mock_engine
 
         with pytest.raises(PrivacyBudgetExhaustedError):
@@ -159,8 +153,6 @@ class TestDPSGDOpacusWrapper:
                 wrapper.attach(MagicMock(), MagicMock(), MagicMock())
 
 
-# ── TestArgusFedAvgStrategy ───────────────────────────────────────────────────
-
 class TestArgusFedAvgStrategy:
     def _make_params(self, shapes=None) -> list:
         """Create a list of random numpy parameter arrays."""
@@ -186,7 +178,6 @@ class TestArgusFedAvgStrategy:
     def test_weighted_average_unequal_weights(self, strategy: ArgusFedAvgStrategy) -> None:
         params_a = [np.array([0.0], dtype=np.float32)]
         params_b = [np.array([10.0], dtype=np.float32)]
-        # 3:1 ratio → result should be 7.5
         averaged = strategy._weighted_average([(params_a, 3), (params_b, 1)])
         np.testing.assert_allclose(averaged[0], np.array([2.5]), atol=1e-5)
 
@@ -203,7 +194,6 @@ class TestArgusFedAvgStrategy:
 
     def test_aggregate_fit_raises_insufficient_clients(self, strategy: ArgusFedAvgStrategy) -> None:
         from src.exceptions import FederatedRoundError
-        # Strategy requires min 2 clients; give only 1
         params = self._make_params()
         res = MagicMock()
         res.num_examples = 100
@@ -259,7 +249,6 @@ class TestArgusFedAvgStrategy:
             results=[(None, res_a), (None, res_b)],
             failures=[],
         )
-        # Weighted loss: (0.4*100 + 0.2*100) / 200 = 0.3
         assert loss == pytest.approx(0.3)
         assert metrics["safety_accuracy"] == pytest.approx(0.85)
 
@@ -270,8 +259,6 @@ class TestArgusFedAvgStrategy:
         assert loss is None
         assert metrics == {}
 
-
-# ── TestArgusFederatedClient ──────────────────────────────────────────────────
 
 class TestArgusFederatedClient:
     """Tests for ArgusFederatedClient — all heavy deps (torch, peft) are mocked."""
@@ -299,7 +286,6 @@ class TestArgusFederatedClient:
     def _fake_lora_params(self) -> list:
         return [np.ones((4, 4), dtype=np.float32), np.zeros((4,), dtype=np.float32)]
 
-    # ── __init__ tests ─────────────────────────────────────────────────────────
 
     def test_init_stores_client_id(self, client: ArgusFederatedClient) -> None:
         assert client.client_id == "test_node"
@@ -317,7 +303,6 @@ class TestArgusFederatedClient:
     def test_init_uses_provided_dp_wrapper(self, client: ArgusFederatedClient, mock_dp: MagicMock) -> None:
         assert client._dp_wrapper is mock_dp
 
-    # ── get_parameters tests ───────────────────────────────────────────────────
 
     def test_get_parameters_loads_model_when_none(
         self, client: ArgusFederatedClient
@@ -350,7 +335,6 @@ class TestArgusFederatedClient:
             result = client.get_parameters(config={})
         assert all(isinstance(p, np.ndarray) for p in result)
 
-    # ── fit tests ─────────────────────────────────────────────────────────────
 
     def test_fit_checks_privacy_budget(
         self, client: ArgusFederatedClient, mock_dp: MagicMock
@@ -421,7 +405,6 @@ class TestArgusFederatedClient:
             client.fit(parameters=params, config={"round": 1})
         mock_dp.record_round.assert_called_once()
 
-    # ── evaluate tests ────────────────────────────────────────────────────────
 
     def test_evaluate_returns_loss_and_metrics(
         self, client: ArgusFederatedClient

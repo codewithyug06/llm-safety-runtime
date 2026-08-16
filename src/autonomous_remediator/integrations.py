@@ -30,8 +30,6 @@ from src.exceptions import AuditLogError, QuarantineError, RollbackError
 logger = structlog.get_logger(__name__)
 
 
-# ── Redis Quarantine Store ────────────────────────────────────────────────────
-
 class RedisQuarantineStore:
     """Manages agent quarantine flags in Redis with TTL-based expiry.
 
@@ -160,8 +158,6 @@ class RedisQuarantineStore:
         return None
 
 
-# ── MLflow Rollback Client ────────────────────────────────────────────────────
-
 class MLflowRollbackClient:
     """Rolls back a model in MLflow registry to a specific version.
 
@@ -225,7 +221,6 @@ class MLflowRollbackClient:
         try:
             client = self._get_client()
 
-            # Archive current production version
             current = self.get_current_production_version(model_name)
             if current and current != str(version):
                 client.transition_model_version_stage(
@@ -240,7 +235,6 @@ class MLflowRollbackClient:
                     version=current,
                 )
 
-            # Promote target version to Production
             client.transition_model_version_stage(
                 name=model_name,
                 version=str(version),
@@ -287,8 +281,6 @@ class MLflowRollbackClient:
             logger.error("list_versions_failed", model=model_name, error=str(exc))
             return []
 
-
-# ── Slack Notifier ────────────────────────────────────────────────────────────
 
 class SlackNotifier:
     """Sends alert messages to Slack via Incoming Webhook.
@@ -381,8 +373,6 @@ class SlackNotifier:
             logger.error("slack_send_error", error=str(exc))
             return False
 
-
-# ── PagerDuty Notifier ────────────────────────────────────────────────────────
 
 class PagerDutyNotifier:
     """Triggers PagerDuty incidents via Events API v2.
@@ -496,8 +486,6 @@ class PagerDutyNotifier:
             logger.error("pagerduty_resolve_error", error=str(exc))
             return False
 
-
-# ── Cloud Spanner Audit Logger ────────────────────────────────────────────────
 
 @dataclass
 class AuditRecord:

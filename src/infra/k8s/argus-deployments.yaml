@@ -1,8 +1,4 @@
 ---
-# ARGUS Kubernetes Manifests
-# ============================
-# All core deployments, services, and HPA configs for ARGUS on GKE.
-# Apply with: kubectl apply -f src/infra/k8s/argus-deployments.yaml
 
 apiVersion: v1
 kind: Namespace
@@ -13,7 +9,6 @@ metadata:
     environment: production
 
 ---
-# ── Safety Critic Deployment (GPU) ───────────────────────────────────────────
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -102,7 +97,6 @@ spec:
   type: ClusterIP
 
 ---
-# ── LatentSentinel Deployment (CPU) ──────────────────────────────────────────
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -151,7 +145,6 @@ spec:
               cpu: "2"
 
 ---
-# ── ARGUS API Deployment ──────────────────────────────────────────────────────
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -214,7 +207,6 @@ spec:
   type: LoadBalancer
 
 ---
-# ── PredictiveOracle Deployment ───────────────────────────────────────────────
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -259,7 +251,6 @@ spec:
             claimName: argus-model-pvc
 
 ---
-# ── Autonomous Remediator Deployment ─────────────────────────────────────────
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -312,7 +303,6 @@ spec:
               cpu: "1"
 
 ---
-# ── HPA for API tier ─────────────────────────────────────────────────────────
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -340,7 +330,6 @@ spec:
           averageUtilization: 70
 
 ---
-# ── Persistent Volume Claim for model artifacts ───────────────────────────────
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

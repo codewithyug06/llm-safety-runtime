@@ -33,12 +33,8 @@ from src.safety_critic.critic import ContentModality
 
 logger = structlog.get_logger(__name__)
 
-# ── Adversarial red-team examples ─────────────────────────────────────────────
-# These are hand-crafted examples for bootstrapping. In production,
-# use GPT-4o or any frontier LLM to generate larger adversarial sets.
 
 ADVERSARIAL_TEXT_PAIRS: List[Tuple[str, str, str]] = [
-    # (prompt, safe_response, unsafe_response)
     (
         "How do I pick a lock?",
         "Lock picking is a skill used by locksmiths for legitimate entry. I recommend consulting a licensed locksmith.",
@@ -103,8 +99,6 @@ ADVERSARIAL_STRUCTURED_PAIRS: List[Tuple[str, str, str]] = [
 ]
 
 
-# ── Dataset builders ──────────────────────────────────────────────────────────
-
 def build_text_dataset(max_samples: int = 5000, hf_token: Optional[str] = None) -> List[Dict]:
     """Build text safety preference pairs from HH-RLHF + adversarial examples.
 
@@ -117,7 +111,6 @@ def build_text_dataset(max_samples: int = 5000, hf_token: Optional[str] = None) 
     """
     records: List[Dict] = []
 
-    # 1. Anthropic HH-RLHF helpful/harmless base
     try:
         from datasets import load_dataset
         ds = load_dataset("Anthropic/hh-rlhf", data_dir="harmless-base",
@@ -127,12 +120,11 @@ def build_text_dataset(max_samples: int = 5000, hf_token: Optional[str] = None) 
             chosen = row.get("chosen", "").strip()
             rejected = row.get("rejected", "").strip()
             if chosen and rejected and len(chosen) > 20 and len(rejected) > 20:
-                # Extract the last assistant turn as the preference pair
                 prompt = chosen.split("Assistant:")[-2].split("Human:")[-1].strip() if "Human:" in chosen else chosen[:200]
                 records.append({
                     "prompt": f"[SAFETY EVAL] Rate this response:\n{prompt}",
-                    "chosen": "0.05",   # Safe → low score
-                    "rejected": "0.92", # Unsafe → high score
+                    "chosen": "0.05",
+                    "rejected": "0.92",
                     "modality": "text",
                 })
                 count += 1
@@ -142,7 +134,6 @@ def build_text_dataset(max_samples: int = 5000, hf_token: Optional[str] = None) 
     except Exception as e:
         logger.warning("hh_rlhf_load_failed", error=str(e))
 
-    # 2. TruthfulQA for hallucination safety pairs
     try:
         from datasets import load_dataset
         ds = load_dataset("truthful_qa", "multiple_choice", split="validation")
@@ -165,7 +156,6 @@ def build_text_dataset(max_samples: int = 5000, hf_token: Optional[str] = None) 
     except Exception as e:
         logger.warning("truthfulqa_load_failed", error=str(e))
 
-    # 3. Adversarial hand-crafted pairs
     for prompt, safe_resp, unsafe_resp in ADVERSARIAL_TEXT_PAIRS:
         records.append({
             "prompt": f"[SAFETY EVAL] Rate this response to: '{prompt}'\n{safe_resp}",
@@ -190,7 +180,6 @@ def build_code_dataset(max_samples: int = 2000) -> List[Dict]:
     records: List[Dict] = []
 
     for prompt, safe_code, unsafe_code in ADVERSARIAL_CODE_PAIRS:
-        # Multiple variations of each pair
         for _ in range(50):
             records.append({
                 "prompt": f"[CODE SAFETY EVAL] Rate this code snippet:\n```python\n{safe_code}\n```",
@@ -205,7 +194,6 @@ def build_code_dataset(max_samples: int = 2000) -> List[Dict]:
                 "modality": "code",
             })
 
-    # Try loading from BigCode safety benchmark if available
     try:
         from datasets import load_dataset
         ds = load_dataset("bigcode/bigcode-the-stack-safety", split="test", trust_remote_code=True)
@@ -221,7 +209,7 @@ def build_code_dataset(max_samples: int = 2000) -> List[Dict]:
                 "modality": "code",
             })
     except Exception:
-        pass  # BigCode dataset optional
+        pass
 
     random.shuffle(records)
     return records[:max_samples]
@@ -257,8 +245,6 @@ def build_structured_dataset(max_samples: int = 1000) -> List[Dict]:
     return records[:max_samples]
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build OmniSafetyCritic DPO dataset")
     parser.add_argument("--output-dir", default="data/safety_critic")
@@ -277,7 +263,6 @@ def main() -> None:
 
     logger.info("building_safety_dataset", output_dir=str(output_dir))
 
-    # Collect all records
     all_records: List[Dict] = []
 
     logger.info("building_text_pairs")
@@ -295,7 +280,6 @@ def main() -> None:
     all_records.extend(structured_records)
     logger.info("structured_pairs_built", count=len(structured_records))
 
-    # Shuffle and split
     random.shuffle(all_records)
     total = len(all_records)
     n_test = int(total * args.test_split)
@@ -306,7 +290,6 @@ def main() -> None:
     val_records = all_records[n_train:n_train + n_val]
     test_records = all_records[n_train + n_val:]
 
-    # Write splits
     for split_name, records in [("train", train_records), ("val", val_records), ("test", test_records)]:
         path = output_dir / f"{split_name}.jsonl"
         with path.open("w") as f:
@@ -314,7 +297,6 @@ def main() -> None:
                 f.write(json.dumps(record) + "\n")
         logger.info("split_written", split=split_name, records=len(records), path=str(path))
 
-    # Print summary
     print(f"\n=== Safety Dataset Built ===")
     print(f"Total records : {total:,}")
     print(f"  Train       : {len(train_records):,}")

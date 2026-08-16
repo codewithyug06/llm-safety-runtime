@@ -24,17 +24,13 @@ import torch
 
 from src.exceptions import SafetyCriticError
 
-# ── Compatibility shim ────────────────────────────────────────────────────────
-# TRL >= 1.0 imports FSDPModule from torch.distributed.fsdp, but PyTorch
-# moved it to torch.distributed._composable.fsdp (FSDP2).  Patch the legacy
-# path so the import resolves without downgrading TRL.
 try:
     import torch.distributed.fsdp as _fsdp_legacy
     if not hasattr(_fsdp_legacy, "FSDPModule"):
         from torch.distributed._composable.fsdp import FSDPModule as _FSDPModule
-        _fsdp_legacy.FSDPModule = _FSDPModule  # type: ignore[attr-defined]
-except Exception:  # pragma: no cover
-    pass  # non-distributed environment — safe to ignore
+        _fsdp_legacy.FSDPModule = _FSDPModule
+except Exception:
+    pass
 
 logger = structlog.get_logger(__name__)
 
@@ -151,7 +147,7 @@ class SafetyCriticTrainer:
             bf16=torch.cuda.is_available(),
             fp16=False,
             gradient_checkpointing=torch.cuda.is_available(),
-            dataloader_num_workers=0,  # Windows: 0 avoids multiprocessing errors
+            dataloader_num_workers=0,
             max_grad_norm=1.0,
             logging_steps=10,
             eval_strategy="steps",
@@ -162,13 +158,11 @@ class SafetyCriticTrainer:
             metric_for_best_model="eval_loss",
             report_to=report_to or ["none"],
             run_name=f"dpo-{self.model_name.split('/')[-1]}",
-            # DPO-specific
             beta=self.dpo_beta,
             max_length=self.max_length,
             loss_type="sigmoid",
             remove_unused_columns=False,
         )
-        # max_prompt_length was removed in TRL >= 1.x; only pass if accepted
         if "max_prompt_length" in _dpo_params:
             kwargs["max_prompt_length"] = self.max_prompt_length
 
@@ -210,7 +204,6 @@ class SafetyCriticTrainer:
         if self._tokenizer.pad_token is None:
             self._tokenizer.pad_token = self._tokenizer.eos_token
 
-        # 4-bit QLoRA: NF4 quantisation for GPUs with <=8 GB VRAM
         bnb_config: Optional[BitsAndBytesConfig] = None
         if self.load_in_4bit:
             bnb_config = BitsAndBytesConfig(
@@ -231,7 +224,6 @@ class SafetyCriticTrainer:
                 low_cpu_mem_usage=True,
             )
         else:
-            # Text-only causal LM (TinyLlama, Qwen2, Mistral, etc.)
             _dtype = torch.float32 if not torch.cuda.is_available() else torch.bfloat16
             base = AutoModelForCausalLM.from_pretrained(
                 self.model_name,
@@ -284,7 +276,6 @@ class SafetyCriticTrainer:
         except Exception:
             _mlflow_active = False
 
-        # Disable W&B/MLflow reporting in TrainingArguments if not available
         _report_to = []
         if _wandb_active:
             _report_to.append("wandb")
@@ -319,7 +310,7 @@ class SafetyCriticTrainer:
 
             self._trainer = DPOTrainer(
                 model=self._model,
-                ref_model=None,  # None → implicit reference (LoRA base)
+                ref_model=None,
                 args=training_args,
                 train_dataset=train_dataset,
                 eval_dataset=eval_dataset,
@@ -334,7 +325,6 @@ class SafetyCriticTrainer:
                     "train_runtime_s": train_result.metrics.get("train_runtime", 0),
                 })
 
-            # Save final model
             self._trainer.save_model(str(self.output_dir / "final"))
             logger.info("training_complete", output_dir=str(self.output_dir / "final"))
         finally:

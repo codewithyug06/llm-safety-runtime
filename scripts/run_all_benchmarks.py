@@ -32,8 +32,6 @@ logger = structlog.get_logger(__name__)
 BASE_DIR = Path(__file__).parent.parent
 
 
-# ── Benchmark step definitions ────────────────────────────────────────────────
-
 @dataclass
 class BenchmarkStep:
     """A single benchmark or evaluation step."""
@@ -41,14 +39,13 @@ class BenchmarkStep:
     name: str
     description: str
     command: List[str]
-    sla_check: str  # Human-readable SLA description
+    sla_check: str
     requires_gpu: bool = False
     requires_data: bool = True
     timeout_seconds: int = 300
 
 
 BENCHMARK_STEPS: List[BenchmarkStep] = [
-    # ── MOD-01: LatentSentinel ────────────────────────────────────────────
     BenchmarkStep(
         name="sentinel_latency",
         description="MOD-01 LatentSentinel - p95 hook latency (<10ms on GPU, reported on CPU)",
@@ -69,7 +66,6 @@ BENCHMARK_STEPS: List[BenchmarkStep] = [
         requires_data=True,
         timeout_seconds=300,
     ),
-    # ── MOD-03: OmniSafetyCritic ─────────────────────────────────────────
     BenchmarkStep(
         name="critic_accuracy",
         description="MOD-03 OmniSafetyCritic - precision/latency (<80ms, >85% precision)",
@@ -80,7 +76,6 @@ BENCHMARK_STEPS: List[BenchmarkStep] = [
         requires_data=True,
         timeout_seconds=600,
     ),
-    # ── MOD-04: FederatedRLHF ─────────────────────────────────────────────
     BenchmarkStep(
         name="federated_gap",
         description="MOD-04 FederatedRLHF - accuracy gap vs centralized (<5%)",
@@ -91,7 +86,6 @@ BENCHMARK_STEPS: List[BenchmarkStep] = [
         requires_data=True,
         timeout_seconds=300,
     ),
-    # ── MOD-05: PredictiveOracle ─────────────────────────────────────────
     BenchmarkStep(
         name="oracle_accuracy",
         description="MOD-05 PredictiveOracle - F1 at 60s horizon (>78% target)",
@@ -105,22 +99,18 @@ BENCHMARK_STEPS: List[BenchmarkStep] = [
 ]
 
 
-# ── Result tracking ───────────────────────────────────────────────────────────
-
 @dataclass
 class StepResult:
     """Result of a single benchmark step execution."""
 
     step: BenchmarkStep
-    status: str  # "passed" | "failed" | "skipped" | "error"
+    status: str
     duration_seconds: float = 0.0
     stdout: str = ""
     stderr: str = ""
     return_code: int = 0
     skip_reason: str = ""
 
-
-# ── Execution engine ──────────────────────────────────────────────────────────
 
 def run_step(step: BenchmarkStep, skip_gpu: bool = False) -> StepResult:
     """Execute a benchmark step and capture the result.
@@ -188,8 +178,6 @@ def run_step(step: BenchmarkStep, skip_gpu: bool = False) -> StepResult:
             return_code=-1,
         )
 
-
-# ── Report generation ─────────────────────────────────────────────────────────
 
 def generate_report(
     results: List[StepResult],
@@ -281,7 +269,6 @@ def generate_report(
             lines += [f"- Skip reason: {r.skip_reason}"]
 
         if r.stdout:
-            # Extract last 50 lines of stdout for conciseness
             stdout_lines = r.stdout.strip().splitlines()
             tail = stdout_lines[-50:] if len(stdout_lines) > 50 else stdout_lines
             lines += [
@@ -316,8 +303,6 @@ def generate_report(
     logger.info("report_written", path=str(output_path))
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run all ARGUS benchmarks")
     parser.add_argument(
@@ -338,7 +323,6 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    # Filter steps
     steps_to_run = BENCHMARK_STEPS
     if args.steps:
         steps_to_run = [s for s in BENCHMARK_STEPS if s.name in args.steps]
@@ -367,7 +351,6 @@ def main() -> None:
         )
         print(f"  {icon} {result.status.upper()}  ({result.duration_seconds:.1f}s)\n")
 
-        # Print last few lines of stdout inline
         if result.stdout:
             for line in result.stdout.strip().splitlines()[-8:]:
                 print(f"    {line}")
@@ -375,11 +358,9 @@ def main() -> None:
 
     total_duration = time.perf_counter() - suite_start
 
-    # Generate report
     output_path = BASE_DIR / args.output
     generate_report(results, output_path, total_duration)
 
-    # Final summary
     passed = [r for r in results if r.status == "passed"]
     failed = [r for r in results if r.status == "failed"]
     errors = [r for r in results if r.status == "error"]

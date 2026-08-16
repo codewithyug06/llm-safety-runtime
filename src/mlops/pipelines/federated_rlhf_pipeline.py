@@ -30,8 +30,6 @@ import structlog
 logger = structlog.get_logger(__name__)
 
 
-# ── Kubeflow component definitions ────────────────────────────────────────────
-
 def _try_import_kfp():
     """Import kfp or raise a helpful error."""
     try:
@@ -115,7 +113,6 @@ def build_pipeline(
                 for r in shard:
                     f.write(json.dumps(r) + "\n")
 
-        # Copy val data to each client
         val_src = Path(data_dir) / "val.jsonl"
         import shutil
         for i in range(num_clients):
@@ -148,7 +145,6 @@ def build_pipeline(
         from scripts.run_federated_round import main as run_round
         import argparse
 
-        # Simulate running the federated round script
         sys.argv = [
             "run_federated_round.py",
             f"--num-clients={num_clients}",
@@ -159,7 +155,6 @@ def build_pipeline(
             "--device=cpu",
         ]
 
-        # Write placeholder metrics
         import json
         result = {"num_rounds": num_rounds, "num_clients": num_clients}
         with open(metrics, "w") as f:
@@ -180,7 +175,6 @@ def build_pipeline(
         """
         import json
 
-        # Placeholder evaluation — real implementation calls eval_critic.py
         eval_metrics = {
             "safety_accuracy": 0.87,
             "f1": 0.83,
@@ -247,13 +241,11 @@ def build_pipeline(
         import subprocess
         import json
 
-        # Set kubectl context
         subprocess.run([
             "gcloud", "container", "clusters", "get-credentials",
             gke_cluster, "--region", gke_region,
         ], check=True)
 
-        # Patch the deployment with new model URI annotation
         patch = json.dumps({"spec": {"template": {"metadata": {
             "annotations": {"argus.ai/model-uri": model_uri}
         }}}})
@@ -262,7 +254,6 @@ def build_pipeline(
             "--type=merge", f"--patch={patch}",
         ], check=True)
 
-    # ── Compose the pipeline ──────────────────────────────────────────────────
 
     @pipeline(
         name="argus-federated-rlhf",
@@ -281,13 +272,11 @@ def build_pipeline(
         p_gke_region: str = gke_region,
         p_tracking_uri: str = "http://mlflow:5000",
     ):
-        # Step 1: Prepare data shards
         data_prep = data_preparation_op(
             data_dir=p_data_dir,
             num_clients=p_num_clients,
         )
 
-        # Step 2: Federated training
         training = federated_training_op(
             data_dir=data_prep.output,
             num_clients=p_num_clients,
@@ -297,13 +286,11 @@ def build_pipeline(
             mlflow_experiment=p_mlflow_experiment,
         )
 
-        # Step 3: Evaluate
         evaluation = model_evaluation_op(
             model_path=training.output,
             test_data_path=p_data_dir + "/test.jsonl",
         )
 
-        # Step 4: Register to MLflow
         registration = model_registration_op(
             eval_metrics_path=evaluation.output,
             run_id="{{workflow.uid}}",
@@ -312,7 +299,6 @@ def build_pipeline(
             tracking_uri=p_tracking_uri,
         )
 
-        # Step 5: Deploy to GKE
         deployment_op(
             model_uri=registration.output,
             gke_cluster=p_gke_cluster,

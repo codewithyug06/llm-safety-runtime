@@ -99,7 +99,6 @@ def main() -> None:
     val_path = data_dir / "val.jsonl"
     test_path = data_dir / "test.jsonl"
 
-    # Validate data files exist
     for p in [train_path, val_path]:
         if not p.exists():
             logger.error("data_file_missing", path=str(p))
@@ -117,7 +116,6 @@ def main() -> None:
         dry_run=args.dry_run,
     )
 
-    # Count samples in each split
     def _count_lines(p: Path) -> int:
         return sum(1 for line in p.open() if line.strip())
 
@@ -146,7 +144,6 @@ def main() -> None:
         print("\nDry run complete — no training performed.")
         return
 
-    # Build trainer
     trainer = SafetyCriticTrainer(
         model_name=args.model,
         output_dir=args.output_dir,
@@ -165,12 +162,9 @@ def main() -> None:
         skip_wandb=args.skip_wandb,
     )
 
-    # Load model (builds LoRA adapters)
     trainer.load_model()
 
-    # Load datasets via HuggingFace Dataset (TRL expects this format)
     logger.info("loading_datasets")
-    # We need tokenizer from trainer to load datasets
     tokenizer = trainer._tokenizer
 
     train_dataset = _load_hf_dataset(train_path, tokenizer, args.max_length)
@@ -182,11 +176,9 @@ def main() -> None:
         val_size=len(val_dataset),
     )
 
-    # Train
     logger.info("starting_dpo_training")
     trainer.train(train_dataset=train_dataset, eval_dataset=val_dataset)
 
-    # Evaluate on test set
     if test_path.exists():
         logger.info("evaluating_on_test_set")
         test_dataset = _load_hf_dataset(test_path, tokenizer, args.max_length)
@@ -195,7 +187,6 @@ def main() -> None:
         for k, v in metrics.items():
             print(f"  {k}: {v:.4f}" if isinstance(v, float) else f"  {k}: {v}")
 
-    # Register to MLflow model registry
     if not args.skip_register:
         logger.info("registering_to_mlflow", registry_name=args.registry_name)
         uri = trainer.register_to_mlflow(model_name=args.registry_name)

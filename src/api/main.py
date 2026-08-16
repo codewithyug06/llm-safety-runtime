@@ -35,7 +35,6 @@ from pydantic import BaseModel, Field
 
 logger = structlog.get_logger(__name__)
 
-# ── Auth ──────────────────────────────────────────────────────────────────────
 
 _API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
 
@@ -44,7 +43,7 @@ def _load_api_keys() -> set:
     raw = os.environ.get("ARGUS_API_KEYS", "")
     if not raw:
         logger.warning("argus_api_keys_not_set_running_open")
-        return set()  # Open in dev if not set
+        return set()
     return {k.strip() for k in raw.split(",") if k.strip()}
 
 _VALID_KEYS = _load_api_keys()
@@ -63,13 +62,11 @@ async def verify_api_key(api_key: Optional[str] = Security(_API_KEY_HEADER)) -> 
         HTTPException 401: If key is missing or invalid.
     """
     if not _VALID_KEYS:
-        return "dev"  # Open in dev mode
+        return "dev"
     if not api_key or api_key not in _VALID_KEYS:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
     return api_key
 
-
-# ── Lifespan ──────────────────────────────────────────────────────────────────
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -78,8 +75,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
     logger.info("argus_api_shutdown")
 
-
-# ── FastAPI App ───────────────────────────────────────────────────────────────
 
 app = FastAPI(
     title="ARGUS Safety OS API",
@@ -97,14 +92,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory state stores (replaced by Redis/Spanner in production)
 _registered_agents: Dict[str, Dict] = {}
 _signal_store: Dict[str, List[Dict]] = {}
 _prediction_store: Dict[str, List[Dict]] = {}
 _audit_store: Dict[str, List[Dict]] = {}
 
-
-# ── Request / Response Models ─────────────────────────────────────────────────
 
 class MonitorRequest(BaseModel):
     """Register a new LLM agent for monitoring."""
@@ -166,8 +158,6 @@ class HealthResponse(BaseModel):
 
 _START_TIME = time.monotonic()
 
-
-# ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @app.get("/health", response_model=HealthResponse, tags=["System"])
 async def health() -> HealthResponse:
@@ -307,7 +297,6 @@ async def manual_remediate(
         logger.error("manual_remediation_failed", agent_id=request.agent_id, error=str(exc))
         raise HTTPException(status_code=500, detail=f"Remediation failed: {exc}")
 
-    # Store in audit log
     audit_record = {
         "action": state["action"],
         "outcome": state["outcome"],
@@ -358,8 +347,6 @@ async def get_audit_log(
     )
 
 
-# ── Internal signal ingestion (called by LatentSentinel via gRPC hot path) ──
-
 @app.post("/internal/signal", include_in_schema=False)
 async def ingest_signal(
     request: Request,
@@ -375,7 +362,6 @@ async def ingest_signal(
         **body,
         "ingested_at": datetime.now(timezone.utc).isoformat(),
     })
-    # Keep last 1000 signals per agent
     if len(_signal_store[agent_id]) > 1000:
         _signal_store[agent_id] = _signal_store[agent_id][-1000:]
     return {"status": "ok", "agent_id": agent_id}

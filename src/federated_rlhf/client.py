@@ -272,11 +272,9 @@ class ArgusFederatedClient:
                     max_length=self.max_length,
                 ).to(self.device)
 
-                # Forward pass — compute cross-entropy losses as DPO proxy
                 chosen_out = private_model(**chosen_enc, labels=chosen_enc["input_ids"])
                 rejected_out = private_model(**rejected_enc, labels=rejected_enc["input_ids"])
 
-                # DPO loss: log(σ(β * (log π_c - log π_r)))
                 beta = 0.1
                 log_ratio = chosen_out.loss - rejected_out.loss
                 loss = -torch.nn.functional.logsigmoid(beta * log_ratio)

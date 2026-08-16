@@ -33,7 +33,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 logger = structlog.get_logger(__name__)
 
-# Probe names and their dataset files
 PROBE_DATASET_MAP: Dict[str, str] = {
     "hallucination": "hallucination_eval.jsonl",
     "jailbreak": "jailbreak_eval.jsonl",
@@ -101,9 +100,8 @@ def _compute_activations(
     all_activations: List[np.ndarray] = []
     captured: List[torch.Tensor] = []
 
-    # Register a simple capture hook
     def capture_hook(module: "torch.nn.Module", inp: tuple, output: tuple) -> None:
-        act = output[0].detach().float().mean(dim=1)  # [batch, hidden]
+        act = output[0].detach().float().mean(dim=1)
         captured.append(act.cpu())
 
     layer = model.model.layers[hook_layer_idx]
@@ -160,7 +158,6 @@ def evaluate_probe(
     texts, labels = _load_probe_dataset(dataset_path)
     y_true = np.array(labels, dtype=np.int64)
 
-    # Load activations from cache (preferred) or compute live
     if activation_cache_path is not None and activation_cache_path.exists():
         logger.info("loading_activation_cache", path=str(activation_cache_path))
         cache = np.load(str(activation_cache_path))
@@ -171,14 +168,12 @@ def evaluate_probe(
             probe=probe_name,
             note="Pass --activation-cache or pre-compute with train_probes.py",
         )
-        # Fallback: random features for structural validation (scores will be ~0.5)
-        hidden_dim = 4096  # Llama 3.1 8B hidden dim
+        hidden_dim = 4096
         rng = np.random.default_rng(42)
         activations = rng.standard_normal((len(texts), hidden_dim)).astype(np.float32)
 
     hidden_dim = activations.shape[1]
 
-    # Load probe model
     probe = LinearResidualProbe(input_dim=hidden_dim)
 
     probe_file = probe_path
@@ -191,7 +186,6 @@ def evaluate_probe(
     probe = probe.to(device)
     probe.eval()
 
-    # Score all samples
     all_probs: List[float] = []
     latencies: List[float] = []
     batch_size = 128
@@ -219,7 +213,6 @@ def evaluate_probe(
     f1 = 2 * precision * recall / max(precision + recall, 1e-8)
     accuracy = (tp + tn) / max(len(y_true), 1)
 
-    # AUC approximation using sorted thresholds
     sorted_idx = np.argsort(probs_arr)[::-1]
     tpr_list = [0.0]
     fpr_list = [0.0]
@@ -299,9 +292,8 @@ def main() -> None:
     if not all_results:
         print("\n[SKIP] No probe eval datasets found.")
         print("       Run: python scripts/train_probes.py first to generate probe weights and eval data.")
-        sys.exit(0)  # Not a failure -- datasets not generated yet
+        sys.exit(0)
 
-    # Print summary table
     print(f"\n=== LatentSentinel Probe Evaluation ===\n")
     print(f"  {'Probe':20} {'Precision':>10} {'Recall':>10} {'F1':>10} "
           f"{'AUC':>8} {'p95ms':>8} {'N':>6}")

@@ -8,7 +8,6 @@
         infra-plan infra-apply infra-destroy \
         pre-commit clean help
 
-# ── Config 
 PYTHON := python3.11
 PIP := $(PYTHON) -m pip
 PYTEST := $(PYTHON) -m pytest
@@ -21,7 +20,6 @@ SRC := src
 TESTS := tests
 CONFIGS := configs
 
-# ── Help 
 help:
 	@echo ""
 	@echo "╔══════════════════════════════════════════════╗"
@@ -69,7 +67,6 @@ help:
 	@echo "  make infra-apply      Terraform apply"
 	@echo ""
 
-# ── Setup 
 install:
 	$(PIP) install -r requirements.txt
 
@@ -77,7 +74,6 @@ install-dev:
 	$(PIP) install -r requirements.txt -r requirements-dev.txt
 	pre-commit install
 
-# ── Quality 
 check: lint typecheck
 
 lint:
@@ -93,7 +89,6 @@ format:
 typecheck:
 	$(MYPY) $(SRC) --ignore-missing-imports --strict
 
-# ── Testing 
 test:
 	$(PYTEST) $(TESTS) -v --tb=short --cov=$(SRC) --cov-report=term-missing --cov-fail-under=80
 
@@ -121,7 +116,6 @@ test-oracle:
 test-remediator:
 	$(PYTEST) $(TESTS)/unit/autonomous_remediator -v --tb=short
 
-# ── Benchmarks 
 benchmark:
 	$(PYTHON) scripts/benchmark_latency.py --all
 	$(PYTHON) scripts/benchmark_throughput.py --all
@@ -133,7 +127,6 @@ benchmark-sentinel:
 benchmark-e2e:
 	$(PYTHON) scripts/benchmark_e2e.py --agents 100 --duration 60
 
-# ── Evaluation 
 eval-probes:
 	$(PYTHON) scripts/eval_probes.py \
 		--datasets halueval,truthfulqa,safetybench \
@@ -156,7 +149,6 @@ eval-federated:
 		--clients 2 \
 		--output docs/benchmarks/federated_eval_$$(date +%Y%m%d).md
 
-# ── Training 
 train-critic:
 	$(PYTHON) -m src.safety_critic.train \
 		--config configs/safety_critic.yaml \
@@ -172,7 +164,6 @@ run-federated-round:
 		--config configs/federated_rlhf.yaml \
 		--round-id $$(date +%Y%m%d_%H%M)
 
-# ── Docker 
 docker-build:
 	docker build -t argus-latent-sentinel:latest -f src/latent_sentinel/Dockerfile .
 	docker build -t argus-remediator:latest -f src/autonomous_remediator/Dockerfile .
@@ -185,7 +176,6 @@ docker-push:
 	docker push gcr.io/$$GCP_PROJECT_ID/argus-oracle:latest
 	docker push gcr.io/$$GCP_PROJECT_ID/argus-api:latest
 
-# ── Deployment 
 deploy-staging:
 	kubectl apply -f src/infra/k8s/ -n argus-staging --prune --all
 	kubectl rollout status deployment -n argus-staging
@@ -195,7 +185,6 @@ deploy-prod:
 	kubectl apply -f src/infra/k8s/ -n argus-prod
 	kubectl rollout status deployment -n argus-prod
 
-# ── Infra 
 infra-plan:
 	cd src/infra/terraform && terraform plan -var-file=prod.tfvars
 
@@ -206,13 +195,11 @@ infra-destroy:
 	@echo "⚠️  DESTROYING INFRASTRUCTURE. Type 'yes' to confirm:" && read ans && [ $$ans = yes ]
 	cd src/infra/terraform && terraform destroy -var-file=prod.tfvars
 
-# ── Pre-commit 
 pre-commit:
 	$(MAKE) format
 	$(MAKE) check
 	$(MAKE) test-unit
 
-# ── Clean 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null; true
 	find . -type f -name "*.pyc" -delete

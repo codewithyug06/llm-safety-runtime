@@ -46,7 +46,6 @@ import torch
 import torch.nn as nn
 import structlog
 
-# ── Project root on sys.path ──────────────────────────────────────────────────
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.causal_engine.intervention import (
@@ -60,12 +59,11 @@ from src.exceptions import CausalGraphNotFoundError, CausalScrubError
 
 logger = structlog.get_logger(__name__)
 
-# ── Architecture constants for Llama 3.1 8B ──────────────────────────────────
 
 LLAMA31_8B_HIDDEN_SIZE: int = 4096
 LLAMA31_8B_NUM_LAYERS: int = 32
 LLAMA31_8B_NUM_HEADS: int = 32
-LLAMA31_8B_D_HEAD: int = 128  # hidden_size / num_heads = 4096 / 32
+LLAMA31_8B_D_HEAD: int = 128
 
 PROBE_CATEGORIES: List[str] = [
     "hallucination",
@@ -74,8 +72,6 @@ PROBE_CATEGORIES: List[str] = [
     "policy_violation",
 ]
 
-
-# ── Probe weight extraction ───────────────────────────────────────────────────
 
 def load_probe_weight_vector(
     probe_path: Path,
@@ -127,13 +123,9 @@ def load_probe_weight_vector(
             f"Found keys: {sorted(state.keys())}"
         )
 
-    # W1: (probe_hidden_dim, hidden_size) -- first layer weight
-    w1: np.ndarray = state["net.0.weight"].float().numpy()  # (64, hidden_size)
-    # W2: (1, probe_hidden_dim)           -- second layer weight
-    w2: np.ndarray = state["net.2.weight"].float().numpy()  # (1, 64)
+    w1: np.ndarray = state["net.0.weight"].float().numpy()
+    w2: np.ndarray = state["net.2.weight"].float().numpy()
 
-    # Auto-detect actual probe input_dim from loaded weights.
-    # Local probes may differ from the expected hidden_size (e.g. 128 vs 4096).
     actual_input_dim = w1.shape[1]
     if actual_input_dim != hidden_size:
         logger.warning(
@@ -143,19 +135,17 @@ def load_probe_weight_vector(
             actual=actual_input_dim,
             note="Using probe's actual input_dim for projection",
         )
-        hidden_size = actual_input_dim  # use real dimension from the file
+        hidden_size = actual_input_dim
     if w2.shape != (1, probe_hidden_dim):
         raise CausalScrubError(
             f"net.2.weight shape mismatch in {probe_path.name}: "
             f"expected (1, {probe_hidden_dim}), got {w2.shape}"
         )
 
-    # Pseudo-inverse projection: W1^+ = W1^T (W1 W1^T)^{-1} -- shape (hidden_size, 64)
-    w1_pinv: np.ndarray = np.linalg.pinv(w1)  # (hidden_size, probe_hidden_dim)
+    w1_pinv: np.ndarray = np.linalg.pinv(w1)
 
-    # Effective weight in hidden-state space: (hidden_size, 64) @ (64, 1) -> (hidden_size, 1)
-    w_eff: np.ndarray = (w1_pinv @ w2.T).squeeze(-1)  # (hidden_size,)
-    w_eff = w_eff / (np.linalg.norm(w_eff) + 1e-8)  # unit-normalise
+    w_eff: np.ndarray = (w1_pinv @ w2.T).squeeze(-1)
+    w_eff = w_eff / (np.linalg.norm(w_eff) + 1e-8)
 
     logger.debug(
         "probe_weights_extracted",
@@ -198,7 +188,6 @@ def load_all_probe_weights(
                 path=str(probe_path),
                 action="using_random_fallback",
             )
-            # Reproducible random unit-vector fallback so the script stays runnable
             rng = np.random.default_rng(seed=abs(hash(cat)) % (2**31))
             w = rng.standard_normal(hidden_size).astype(np.float32)
             w /= np.linalg.norm(w) + 1e-8
@@ -223,8 +212,6 @@ def load_all_probe_weights(
     )
     return probe_weights
 
-
-# ── Activation data loading / generation ─────────────────────────────────────
 
 def load_or_generate_activations(
     data_dir: Path,
@@ -283,7 +270,6 @@ def load_or_generate_activations(
             logger.warning("npz_load_failed", path=str(npz_path), error=str(exc))
 
     if loaded_flat is not None:
-        # Accept (N, hidden_size) or (N, num_heads, d_head)
         if loaded_flat.ndim == 2 and loaded_flat.shape[1] == hidden_size:
             acts = loaded_flat[:n_samples].reshape(-1, num_heads, d_head)
             return acts
@@ -296,7 +282,6 @@ def load_or_generate_activations(
             action="generating_random_fallback",
         )
 
-    # ── Random fallback ───────────────────────────────────────────────────────
     logger.info(
         "generating_random_activations",
         category=category,
@@ -306,14 +291,11 @@ def load_or_generate_activations(
     rng = np.random.default_rng(seed=rng_seed + abs(hash(category)) % (2**31))
     acts = rng.standard_normal((n_samples, num_heads, d_head)).astype(np.float32)
 
-    # Inject a weak signal into a few heads so the ablation study finds edges
     for signal_head in range(0, min(num_heads, 4)):
         acts[:, signal_head, :] += 0.5 * rng.standard_normal(d_head).astype(np.float32)
 
     return acts
 
-
-# ── Per-layer ablation wrapper ────────────────────────────────────────────────
 
 def run_layer_ablation(
     scrubber: CausalScrubber,
@@ -352,22 +334,20 @@ def run_layer_ablation(
     discovered_at = datetime.now(timezone.utc).isoformat()
 
     for head_idx in range(num_heads):
-        # Ablate: zero out this head's slice
         ablated = activations_3d.copy()
         ablated[:, head_idx, :] = 0.0
 
-        # Mean-pool over samples -> (num_heads, d_head) -> (hidden_size,)
-        orig_flat = activations_3d.mean(axis=0).reshape(-1)      # (hidden_size,)
-        ablated_flat = ablated.mean(axis=0).reshape(-1)          # (hidden_size,)
+        orig_flat = activations_3d.mean(axis=0).reshape(-1)
+        ablated_flat = ablated.mean(axis=0).reshape(-1)
 
-        orig_jax = jnp.array(orig_flat[None, :])    # (1, hidden_size) -- seq dim
+        orig_jax = jnp.array(orig_flat[None, :])
         ablated_jax = jnp.array(ablated_flat[None, :])
 
         for cat in categories:
             if cat not in probe_weights:
                 continue
 
-            pw = jnp.array(probe_weights[cat])  # (hidden_size,)
+            pw = jnp.array(probe_weights[cat])
             delta = float(compute_ablation_effect(orig_jax, ablated_jax, pw))
 
             if abs(delta) >= min_delta:
@@ -397,8 +377,6 @@ def run_layer_ablation(
 
     return edges
 
-
-# ── Causal graph serialisation ────────────────────────────────────────────────
 
 def serialize_causal_graph(graph: CausalGraph) -> Dict:
     """Convert a ``CausalGraph`` to a JSON-serialisable dictionary.
@@ -471,8 +449,6 @@ def save_causal_graph(graph: CausalGraph, output_dir: Path, model_name: str) -> 
     return out_path
 
 
-# ── Summary table ─────────────────────────────────────────────────────────────
-
 def print_summary_table(
     graph: CausalGraph,
     categories: List[str],
@@ -538,8 +514,6 @@ def print_summary_table(
     print(f"\n{separator}\n")
 
 
-# ── MLflow logging helpers ────────────────────────────────────────────────────
-
 def log_to_mlflow(
     graph: CausalGraph,
     categories: List[str],
@@ -580,7 +554,6 @@ def log_to_mlflow(
         mlflow.set_experiment("nexus/causal_scrubbing")
 
         with mlflow.start_run(run_name=f"causal_scrubbing_{model_name}"):
-            # Params
             mlflow.log_params(
                 {
                     "model_name": model_name,
@@ -592,23 +565,19 @@ def log_to_mlflow(
                 }
             )
 
-            # Core metrics
             mlflow.log_metric("num_edges", len(graph.edges))
             mlflow.log_metric("run_time_seconds", round(run_time_seconds, 3))
 
-            # Per-category edge counts
             for cat in categories:
                 cat_edges = [e for e in graph.edges if e.behavior_category == cat]
                 mlflow.log_metric(f"{cat}_num_edges", len(cat_edges))
 
-            # Top-5 heads per category (logged as a JSON param for easy retrieval)
             top_heads_dict: Dict[str, List[str]] = {}
             for cat in categories:
                 top = graph.get_unsafe_heads(cat, min_effect=0.0)[:5]
                 top_heads_dict[cat] = [str(h) for h in top]
             mlflow.log_param("top_heads_per_category", json.dumps(top_heads_dict))
 
-            # Artefact
             mlflow.log_artifact(str(graph_path))
 
         logger.info(
@@ -617,15 +586,13 @@ def log_to_mlflow(
             run_time_seconds=run_time_seconds,
         )
 
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning(
             "mlflow_logging_failed",
             error=str(exc),
             action="continuing_without_mlflow",
         )
 
-
-# ── CLI argument parsing ──────────────────────────────────────────────────────
 
 def parse_args() -> argparse.Namespace:
     """Parse CLI arguments.
@@ -711,8 +678,6 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-# ── Entrypoint ────────────────────────────────────────────────────────────────
-
 def main() -> None:
     """Run the full offline causal-scrubbing pipeline.
 
@@ -754,7 +719,6 @@ def main() -> None:
 
     t_start = time.perf_counter()
 
-    # ── Step 1: Load probe weights ────────────────────────────────────────────
     try:
         probe_weights = load_all_probe_weights(
             probe_dir=probe_dir,
@@ -765,11 +729,6 @@ def main() -> None:
         logger.exception("probe_loading_failed")
         sys.exit(1)
 
-    # ── Auto-adapt architecture dims to match actual probe input_dim ─────────
-    # Local probes (e.g. trained on per-head d_head activations) may have
-    # input_dim != num_heads * d_head.  When that happens we switch to
-    # single-head mode so activation pooling produces (probe_input_dim,)
-    # vectors that match the probe weight shape.
     if probe_weights:
         actual_probe_input_dim = min(len(v) for v in probe_weights.values())
         if actual_probe_input_dim != hidden_size:
@@ -783,7 +742,6 @@ def main() -> None:
             args.num_heads = 1
             args.d_head = actual_probe_input_dim
 
-    # ── Step 2 + 3: Load activations and run ablation per layer ──────────────
     scrubber = CausalScrubber(
         model_id=args.model_name,
         num_layers=args.num_layers,
@@ -799,10 +757,6 @@ def main() -> None:
             total_layers=args.num_layers,
         )
 
-        # Load or generate activations for this layer's category set.
-        # We use the first category as the activation filename key; all
-        # categories share the same activation tensor per layer in this offline
-        # pipeline (a real run would separate them by prompt label).
         primary_cat = args.categories[0]
         layer_acts_3d = load_or_generate_activations(
             data_dir=data_dir,
@@ -834,7 +788,6 @@ def main() -> None:
             cumulative_edges=len(all_edges),
         )
 
-    # ── Step 4: Build CausalGraph ─────────────────────────────────────────────
     top_k_heads: Dict[str, List[HeadSignature]] = {}
     for cat in args.categories:
         cat_edges = sorted(
@@ -857,7 +810,6 @@ def main() -> None:
         categories=args.categories,
     )
 
-    # ── Step 5: Save to disk ──────────────────────────────────────────────────
     try:
         graph_path = save_causal_graph(graph, output_dir, args.model_name)
     except CausalScrubError:
@@ -866,7 +818,6 @@ def main() -> None:
 
     t_elapsed = time.perf_counter() - t_start
 
-    # ── Step 6: MLflow logging ────────────────────────────────────────────────
     log_to_mlflow(
         graph=graph,
         categories=args.categories,
@@ -880,7 +831,6 @@ def main() -> None:
         num_heads=args.num_heads,
     )
 
-    # ── Step 7: Human-readable summary ───────────────────────────────────────
     print_summary_table(graph, args.categories, top_k=args.top_k)
 
     print(f"  Graph saved : {graph_path}")

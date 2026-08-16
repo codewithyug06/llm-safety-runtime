@@ -41,8 +41,6 @@ from src.autonomous_remediator.rate_limiter import RateLimitAgent
 from src.safety_critic.critic import ContentModality, CriticInput, CriticOutput
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
 def _make_mock_quarantine_store() -> RedisQuarantineStore:
     """QuarantineStore backed by an in-memory dict (no Redis needed)."""
     store = RedisQuarantineStore.__new__(RedisQuarantineStore)
@@ -130,8 +128,6 @@ def _make_mock_rollback_client() -> MLflowRollbackClient:
     return client
 
 
-# ── Pipeline fixture ──────────────────────────────────────────────────────────
-
 @pytest.fixture()
 def pipeline_components():
     """Returns all mock pipeline components for reuse."""
@@ -144,8 +140,6 @@ def pipeline_components():
         "rollback_client": _make_mock_rollback_client(),
     }
 
-
-# ── TestCriticOutput ──────────────────────────────────────────────────────────
 
 class TestCriticOutputIntegration:
     """Verify CriticOutput properties across the full score range."""
@@ -174,8 +168,6 @@ class TestCriticOutputIntegration:
         out = CriticOutput(safety_score=score, modality=ContentModality.TEXT, latency_ms=1.0)
         assert out.risk_category == expected
 
-
-# ── TestRemediationGraph ──────────────────────────────────────────────────────
 
 class TestRemediationGraph:
     """Test the full remediation graph routing logic."""
@@ -212,7 +204,6 @@ class TestRemediationGraph:
 
         assert state["action"] == "no_action"
         assert not qs.is_quarantined("safe_agent")
-        # Audit record should still be written
         records = al.query_by_agent("safe_agent")
         assert len(records) == 1
 
@@ -248,7 +239,6 @@ class TestRemediationGraph:
 
         assert state["action"] == "filter_output"
         assert state["outcome"] == "success"
-        # Filter is implemented via short quarantine
         assert qs.is_quarantined("filter_agent")
 
     @pytest.mark.asyncio
@@ -321,7 +311,6 @@ class TestRemediationGraph:
 
         assert state["action"] == "rollback_and_escalate"
         assert state["outcome"] == "success"
-        # PagerDuty should have been triggered
         assert pd.trigger_incident.called
 
     @pytest.mark.asyncio
@@ -358,7 +347,6 @@ class TestRemediationGraph:
                 "start_time": time.monotonic(),
             })
 
-        # Every agent should have exactly one audit record
         for agent_id in agents:
             records = al.query_by_agent(agent_id)
             assert len(records) == 1, f"Expected 1 audit record for {agent_id}, got {len(records)}"
@@ -397,8 +385,6 @@ class TestRemediationGraph:
         assert state["outcome"] == "success"
 
 
-# ── TestRedisQuarantineStoreIntegration ───────────────────────────────────────
-
 class TestRedisQuarantineStoreMock:
     """Tests for RedisQuarantineStore using in-memory mock."""
 
@@ -423,8 +409,6 @@ class TestRedisQuarantineStoreMock:
         info = store.get_quarantine_info("agent_z")
         assert info is not None
 
-
-# ── TestAuditLoggerIntegration ────────────────────────────────────────────────
 
 class TestAuditLoggerMock:
     def test_write_and_query(self) -> None:

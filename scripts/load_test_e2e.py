@@ -26,7 +26,6 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 from unittest.mock import AsyncMock
 
-# ── Path setup — makes this script runnable from the repo root ────────────────
 import os
 import logging
 
@@ -34,9 +33,6 @@ _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
-# Suppress structlog/logging noise so the results table is readable.
-# Strategy: route structlog through stdlib logging, then disable stdlib at CRITICAL+1.
-# cache_logger_on_first_use=False forces already-imported loggers to re-bind.
 logging.disable(logging.CRITICAL)
 try:
     import structlog as _sl
@@ -65,29 +61,19 @@ from src.autonomous_remediator.langgraph_graph import build_remediation_graph
 from src.autonomous_remediator.rate_limiter import RateLimitAgent
 
 
-# ── Score distribution buckets ────────────────────────────────────────────────
-# Mirrors realistic production traffic observed in ARGUS Colab evaluations.
-#   30%  → safe        (score 0.05–0.35)   → no_action
-#   25%  → borderline  (score 0.40–0.60)   → filter_output
-#   25%  → rate_limit  (score 0.65–0.75)   → rate_limit
-#   15%  → quarantine  (score 0.80–0.88)   → quarantine
-#    5%  → rollback    (score 0.91–0.97)   → rollback_and_escalate
-
 _BUCKETS: list[tuple[float, tuple[float, float]]] = [
-    (0.30, (0.05, 0.35)),   # safe
-    (0.25, (0.40, 0.60)),   # borderline / filter_output
-    (0.25, (0.65, 0.75)),   # rate_limit
-    (0.15, (0.80, 0.88)),   # quarantine
-    (0.05, (0.91, 0.97)),   # rollback + escalate
+    (0.30, (0.05, 0.35)),
+    (0.25, (0.40, 0.60)),
+    (0.25, (0.65, 0.75)),
+    (0.15, (0.80, 0.88)),
+    (0.05, (0.91, 0.97)),
 ]
 
 _BUCKET_WEIGHTS = [w for w, _ in _BUCKETS]
 _BUCKET_RANGES = [r for _, r in _BUCKETS]
 
-_MODALITIES = ["text", "text", "text", "code", "structured"]  # weighted toward text
+_MODALITIES = ["text", "text", "text", "code", "structured"]
 
-
-# ── In-memory mock helpers (mirrors tests/e2e/test_full_pipeline.py) ──────────
 
 def _make_mock_quarantine_store() -> RedisQuarantineStore:
     """QuarantineStore backed by an in-memory dict — no Redis required."""
@@ -122,7 +108,6 @@ def _make_mock_audit_logger() -> SpannerAuditLogger:
     """SpannerAuditLogger backed by in-memory list — no Spanner required."""
     audit_logger = SpannerAuditLogger.__new__(SpannerAuditLogger)
     audit_logger._records: list = []
-    # NOTE: no asyncio.Lock needed — asyncio is single-threaded; list.append is atomic.
 
     def _write(record: AuditRecord) -> None:
         audit_logger._records.append(record)
@@ -184,8 +169,6 @@ def _make_mock_rollback_client() -> MLflowRollbackClient:
     return client
 
 
-# ── Request sampler ───────────────────────────────────────────────────────────
-
 def _sample_safety_score(rng: random.Random) -> float:
     """Draw a safety score from the realistic production distribution.
 
@@ -198,8 +181,6 @@ def _sample_safety_score(rng: random.Random) -> float:
     (lo, hi) = rng.choices(_BUCKET_RANGES, weights=_BUCKET_WEIGHTS, k=1)[0]
     return round(rng.uniform(lo, hi), 4)
 
-
-# ── Error surfacing (print first few unique errors for diagnostics) ───────────
 
 _ERRORS_SHOWN: list[str] = []
 _MAX_ERRORS_SHOWN = 3
@@ -218,8 +199,6 @@ def _maybe_surface_error(exc: Exception) -> None:
                 file=sys.stderr,
             )
 
-
-# ── Per-agent load worker ─────────────────────────────────────────────────────
 
 @dataclass
 class RequestResult:
@@ -316,8 +295,6 @@ def _score_to_risk_label(score: float) -> str:
     return "clearly_unsafe"
 
 
-# ── Percentile helper ─────────────────────────────────────────────────────────
-
 def _percentile(sorted_values: List[float], pct: float) -> float:
     """Compute a percentile over a sorted list.
 
@@ -335,8 +312,6 @@ def _percentile(sorted_values: List[float], pct: float) -> float:
     frac = idx - lo
     return sorted_values[lo] * (1.0 - frac) + sorted_values[hi] * frac
 
-
-# ── Main load test ────────────────────────────────────────────────────────────
 
 async def run_load_test(
     num_agents: int,
@@ -356,11 +331,6 @@ async def run_load_test(
           f"(agents={num_agents}, req/agent={requests_per_agent}, "
           f"seed={seed}, concurrency={concurrency}) ...")
 
-    # Build shared in-memory mock state stores.
-    # The compiled graph is NOT shared — each agent builds its own copy so that
-    # LangGraph's per-execution internal channels never race across coroutines.
-    # Shared state (quarantine dict, audit list, etc.) is intentionally shared
-    # so the load test accurately reflects cross-agent coordination.
     quarantine_store = _make_mock_quarantine_store()
     audit_logger = _make_mock_audit_logger()
     rate_limiter = _make_mock_rate_limiter()
@@ -368,15 +338,10 @@ async def run_load_test(
     pagerduty = _make_mock_pagerduty()
     rollback_client = _make_mock_rollback_client()
 
-    # Create per-agent RNG instances (deterministic, independent per agent)
     master_rng = random.Random(seed)
     agent_rngs = [random.Random(master_rng.randint(0, 2**31)) for _ in range(num_agents)]
     agent_ids = [f"agent_{i:04d}" for i in range(num_agents)]
 
-    # Pre-build all agent graphs BEFORE the timed test section.
-    # Graph compilation is synchronous and ~3–5ms each; building 100 inside the
-    # async loop would block the event loop for ~400ms and inflate p95/p99.
-    # Doing it here keeps it out of the latency measurement window.
     print(f"Pre-building {num_agents} compiled graphs (one per agent) ...")
     _graph_kwargs = dict(
         quarantine_store=quarantine_store,
@@ -388,7 +353,6 @@ async def run_load_test(
     )
     agent_graphs = [build_remediation_graph(**_graph_kwargs) for _ in range(num_agents)]
 
-    # Use a semaphore to cap concurrency
     sem = asyncio.Semaphore(concurrency)
 
     async def _bounded_agent(
@@ -406,10 +370,8 @@ async def run_load_test(
 
     wall_elapsed = time.perf_counter() - wall_t0
 
-    # Flatten results
     all_results: List[RequestResult] = [r for group in all_result_groups for r in group]
 
-    # ── Stats ─────────────────────────────────────────────────────────────────
     total_requests = len(all_results)
     throughput = total_requests / wall_elapsed if wall_elapsed > 0 else 0.0
 
@@ -422,7 +384,6 @@ async def run_load_test(
     action_counts: Counter = Counter(r.action for r in all_results)
     audit_count = len(audit_logger._records)
 
-    # ── Print results table ───────────────────────────────────────────────────
     sla_pass = p95 < 200.0
     sla_label = "PASS" if sla_pass else "FAIL"
 
@@ -444,7 +405,6 @@ async def run_load_test(
     print()
     print("Action distribution:")
 
-    # Print in canonical order
     action_order = [
         "no_action",
         "filter_output",
@@ -460,7 +420,6 @@ async def run_load_test(
         pct = 100.0 * count / total_requests if total_requests else 0.0
         print(f"  {action:<24}: {count:>5,} ({pct:4.1f}%)")
 
-    # Print any unexpected action keys
     for action, count in action_counts.items():
         if action not in action_order:
             pct = 100.0 * count / total_requests if total_requests else 0.0
@@ -471,12 +430,9 @@ async def run_load_test(
     print(f"SLA check: p95 < 200ms -> [{sla_label}] (actual: {p95:.2f}ms)")
     print("=" * 50)
 
-    # Exit non-zero on SLA failure so CI catches it
     if not sla_pass:
         sys.exit(1)
 
-
-# ── CLI entrypoint ────────────────────────────────────────────────────────────
 
 def _parse_args() -> argparse.Namespace:
     """Parse command-line arguments.

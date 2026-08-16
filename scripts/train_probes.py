@@ -42,15 +42,13 @@ from tqdm import tqdm
 
 import structlog
 
-# Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.config import load_sentinel_config
-from src.exceptions import ProbeInferenceError  # noqa: F401 — used for structured error raising
+from src.exceptions import ProbeInferenceError
 
 logger = structlog.get_logger(__name__)
 
-# ── Dataset sources per category ─────────────────────────────────────────────
 
 DATASET_REGISTRY: Dict[str, Dict[str, str]] = {
     "hallucination": {
@@ -75,8 +73,6 @@ DATASET_REGISTRY: Dict[str, Dict[str, str]] = {
     },
 }
 
-
-# ── Activation Collector ──────────────────────────────────────────────────────
 
 @dataclass
 class ActivationCollector:
@@ -121,25 +117,21 @@ class ActivationCollector:
         """
         features = []
         for bundle in self._bundles:
-            # Mean-pool across sequence: (batch, seq_len, hidden) → (hidden,)
-            pooled = bundle.residual_stream.mean(dim=1).squeeze(0)  # (hidden_dim,)
+            pooled = bundle.residual_stream.mean(dim=1).squeeze(0)
             features.append(pooled.float().cpu())
 
-        X = torch.stack(features)  # (N, hidden_dim)
+        X = torch.stack(features)
         y = torch.tensor(self._labels, dtype=torch.long)
 
-        # Project to probe_dim with a fixed random projection (reproducible)
         hidden_dim = X.shape[1]
         if hidden_dim > probe_dim:
             generator = torch.Generator().manual_seed(42)
             projection = torch.randn(hidden_dim, probe_dim, generator=generator)
             projection = projection / projection.norm(dim=0, keepdim=True)
-            X = X @ projection  # (N, probe_dim)
+            X = X @ projection
 
         return X, y
 
-
-# ── Dataset Loading ───────────────────────────────────────────────────────────
 
 def load_probe_dataset(
     category: str,
@@ -174,7 +166,6 @@ def load_probe_dataset(
     if category == "hallucination":
         ds = load_dataset("truthful_qa", "multiple_choice", token=hf_token, split="validation")
         for row in ds:
-            # Unsafe: the incorrect (hallucinated) answer
             question = row["question"]
             if row["mc1_targets"]["labels"]:
                 wrong_ans = row["mc1_targets"]["choices"][
@@ -184,7 +175,6 @@ def load_probe_dataset(
                 ]
                 prompts.append(f"Q: {question}\nA: {wrong_ans}")
                 labels.append(1)
-            # Safe: the correct answer
             correct_ans = row["mc1_targets"]["choices"][
                 row["mc1_targets"]["labels"].index(1)
             ]
@@ -195,7 +185,6 @@ def load_probe_dataset(
 
     elif category in ("jailbreak", "policy_violation"):
         if category == "policy_violation":
-            # red-team-attempts uses 'transcript' + 'rating' (not chosen/rejected)
             ds = load_dataset(
                 "Anthropic/hh-rlhf",
                 data_dir="red-team-attempts",
@@ -209,7 +198,6 @@ def load_probe_dataset(
                 rating = float(row.get("rating") or 5.0)
                 if not transcript:
                     continue
-                # Lower rating = more harmful in red-team dataset
                 if rating < 3.0 and len(unsafe_pool) < half:
                     unsafe_pool.append(transcript[:512])
                 elif rating >= 3.0 and len(safe_pool) < half:
@@ -223,7 +211,6 @@ def load_probe_dataset(
                 prompts.append(text)
                 labels.append(0)
         else:
-            # jailbreak uses harmless-base (chosen/rejected pairs)
             ds = load_dataset(
                 "Anthropic/hh-rlhf",
                 data_dir="harmless-base",
@@ -244,7 +231,6 @@ def load_probe_dataset(
 
     elif category == "toxic_reasoning":
         ds = load_dataset("allenai/real-toxicity-prompts", split="train")
-        # Pre-scan to guarantee balanced labels — toxic rows are sparse at the start
         toxic_pool: List[str] = []
         safe_pool: List[str] = []
         for row in ds:
@@ -274,8 +260,6 @@ def load_probe_dataset(
     )
     return prompts, labels
 
-
-# ── Inference + Activation Collection ────────────────────────────────────────
 
 @torch.no_grad()
 def collect_activations(
@@ -307,7 +291,6 @@ def collect_activations(
     """
     model.eval()
 
-    # Locate the transformer layer list
     if hasattr(model, "model") and hasattr(model.model, "layers"):
         layer_list = model.model.layers
     elif hasattr(model, "transformer") and hasattr(model.transformer, "h"):
@@ -321,7 +304,6 @@ def collect_activations(
 
     def _hook(_module: nn.Module, _inp: tuple, output: tuple) -> None:
         hidden = output[0] if isinstance(output, tuple) else output
-        # Mean-pool over sequence → (batch, hidden_dim)
         pooled = hidden.detach().float().mean(dim=1)
         captured.append(pooled.cpu())
 
@@ -347,7 +329,7 @@ def collect_activations(
             _ = model(**inputs)
 
             if captured:
-                acts = captured[0].numpy()  # (batch, hidden_dim)
+                acts = captured[0].numpy()
                 all_activations.append(acts)
                 all_labels.extend(batch_labels)
     finally:
@@ -360,8 +342,6 @@ def collect_activations(
         )
     return np.concatenate(all_activations, axis=0), np.array(all_labels, dtype=np.int64)
 
-
-# ── Probe Training ────────────────────────────────────────────────────────────
 
 def train_probe(
     X_train: torch.Tensor,
@@ -403,7 +383,6 @@ def train_probe(
     train_dl = DataLoader(train_ds, batch_size=64, shuffle=True)
 
     best_val_precision = 0.0
-    # Initialise with current weights so load_state_dict never gets an empty dict
     best_state: Dict = {k: v.clone() for k, v in probe.state_dict().items()}
 
     for epoch in range(num_epochs):
@@ -417,7 +396,6 @@ def train_probe(
             optimizer.step()
         scheduler.step()
 
-        # Validation
         probe.eval()
         with torch.no_grad():
             val_logits = probe(X_val.to(device))
@@ -438,7 +416,6 @@ def train_probe(
     probe.load_state_dict(best_state)
     probe.eval()
 
-    # Final evaluation
     with torch.no_grad():
         val_logits = probe(X_val.to(device))
         val_preds = (torch.sigmoid(val_logits) > 0.5).cpu().numpy()
@@ -452,8 +429,6 @@ def train_probe(
     }
     return probe, metrics
 
-
-# ── Synthetic Training (no LLM required) ─────────────────────────────────────
 
 def run_synthetic_training(
     categories: List[str],
@@ -497,7 +472,6 @@ def run_synthetic_training(
 
         rng = np.random.default_rng(seed=42 + abs(hash(cat)) % 10_000)
 
-        # Separating direction — random unit vector
         direction = rng.standard_normal(probe_dim).astype(np.float32)
         direction /= np.linalg.norm(direction)
 
@@ -520,7 +494,6 @@ def run_synthetic_training(
         X_val = torch.from_numpy(X_eval_np)
         y_val = torch.from_numpy(y_eval_np).long()
 
-        # Build probe matching eval_probes.py interface
         probe = EvalProbe(input_dim=probe_dim).to(device)
         optimizer = optim.AdamW(probe.parameters(), lr=1e-3, weight_decay=1e-4)
         criterion = nn.BCEWithLogitsLoss()
@@ -560,7 +533,6 @@ def run_synthetic_training(
         probe.load_state_dict(best_state)
         probe.eval()
 
-        # Final metrics
         with torch.no_grad():
             val_logits = probe(X_val.to(device))
             val_preds = (torch.sigmoid(val_logits) > 0.5).cpu().numpy()
@@ -573,17 +545,14 @@ def run_synthetic_training(
         f1 = 2 * precision * recall / max(precision + recall, 1e-8)
         accuracy = float((val_preds == y_val_np).mean())
 
-        # Save probe weights
         probe_path = output_dir / f"{cat}.pt"
         torch.save(probe.state_dict(), probe_path)
 
-        # Save eval JSONL
         eval_jsonl = data_dir / f"{cat}_eval.jsonl"
         with eval_jsonl.open("w") as fh:
             for i, (feat, lbl) in enumerate(zip(X_eval_np, y_eval_np)):
                 fh.write(json.dumps({"text": f"synthetic_sample_{i}", "label": int(lbl)}) + "\n")
 
-        # Save activation cache so eval_probes.py can skip re-computation
         cache_path = data_dir / f"{cat}_activations.npz"
         np.save(str(cache_path).replace(".npz", ""), X_eval_np)
         np.savez(str(cache_path), activations=X_eval_np, labels=y_eval_np)
@@ -607,8 +576,6 @@ def run_synthetic_training(
 
     return results
 
-
-# ── Main Entry Point ──────────────────────────────────────────────────────────
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train ARGUS LatentSentinel probes")
@@ -646,7 +613,6 @@ def main() -> None:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # ── Synthetic fast-path (no LLM required) ────────────────────────────────
     if args.synthetic:
         logger.info(
             "synthetic_training_mode",
@@ -682,12 +648,11 @@ def main() -> None:
             )
         return
 
-    # Auto-detect target layers from config; fallback to sensible defaults
     try:
         cfg = load_sentinel_config()
         target_layers = cfg.hooks.target_layers
     except Exception:
-        target_layers = None  # will auto-detect after model load
+        target_layers = None
 
     logger.info(
         "probe_training_start",
@@ -696,7 +661,6 @@ def main() -> None:
         device=args.device,
     )
 
-    # Load model + tokenizer (lazy import to avoid torch at import time)
     try:
         from transformers import AutoModelForCausalLM, AutoTokenizer
     except ImportError:
@@ -709,7 +673,6 @@ def main() -> None:
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    # Use float32 on CPU (bfloat16 has no native CPU SIMD and is ~10x slower)
     _dtype = torch.float32 if args.device == "cpu" else torch.bfloat16
     model = AutoModelForCausalLM.from_pretrained(
         args.model,
@@ -720,17 +683,14 @@ def main() -> None:
     model.eval()
     logger.info("model_loaded", model=args.model)
 
-    # Auto-detect model dimensions
     hidden_dim: int = getattr(model.config, "hidden_size", 4096)
     num_layers: int = getattr(model.config, "num_hidden_layers", 32)
     if target_layers is None:
-        # Pick 3 evenly spaced layers in the second half of the model
         target_layers = [
             num_layers // 4,
             num_layers // 2,
             num_layers * 3 // 4,
         ]
-    # Clamp to valid range
     target_layers = [min(l, num_layers - 1) for l in target_layers]
     logger.info(
         "model_dims",
@@ -766,12 +726,10 @@ def main() -> None:
                     }
                 )
 
-            # Load dataset
             prompts, labels = load_probe_dataset(
                 category, max_samples=args.max_samples, hf_token=args.hf_token
             )
 
-            # Collect activations — returns (np.ndarray [N, hidden_dim], np.ndarray [N])
             activations_np, labels_np = collect_activations(
                 model=model,
                 tokenizer=tokenizer,
@@ -781,18 +739,15 @@ def main() -> None:
                 device=args.device,
             )
 
-            # Convert to tensors
             X = torch.from_numpy(activations_np.astype(np.float32))
             y = torch.from_numpy(labels_np).long()
 
-            # Train/val split (80/20)
             n = len(X)
             n_train = int(0.8 * n)
             idx = torch.randperm(n)
             X_train, X_val = X[idx[:n_train]], X[idx[n_train:]]
             y_train, y_val = y[idx[:n_train]], y[idx[n_train:]]
 
-            # Train — hidden_dim is the actual activation size
             probe, metrics = train_probe(
                 X_train, y_train, X_val, y_val,
                 hidden_dim=hidden_dim,
@@ -803,13 +758,11 @@ def main() -> None:
             if _mlflow_active:
                 mlflow.log_metrics(metrics)
 
-            # Save probe weights — eval_probes.py expects {category}.pt
             probe_path = output_dir / f"{category}.pt"
             torch.save(probe.state_dict(), probe_path)
             if _mlflow_active:
                 mlflow.log_artifact(str(probe_path))
 
-            # Save eval JSONL so eval_probes.py can load it
             X_val_np = X_val.numpy()
             y_val_np = y_val.numpy()
             eval_jsonl = data_dir / f"{category}_eval.jsonl"
@@ -817,7 +770,6 @@ def main() -> None:
                 for i, lbl in enumerate(y_val_np):
                     fh.write(json.dumps({"text": f"sample_{i}", "label": int(lbl)}) + "\n")
 
-            # Save activation cache for eval_probes.py
             cache_path = data_dir / f"{category}_activations.npz"
             np.savez(str(cache_path), activations=X_val_np, labels=y_val_np)
 
@@ -843,14 +795,12 @@ def main() -> None:
             if _mlflow_active and run_ctx is not None:
                 mlflow.end_run()
 
-    # Summary report
     summary_path = output_dir / "training_summary.json"
     with summary_path.open("w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
 
     logger.info("probe_training_complete", results=results)
 
-    # Print table
     print("\n=== Probe Training Results ===")
     print(f"  {'Category':<22} {'Precision':>10} {'Recall':>10} {'F1':>10} {'Status':>8}")
     print("  " + "-" * 65)

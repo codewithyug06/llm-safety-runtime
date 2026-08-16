@@ -34,16 +34,12 @@ import structlog
 try:
     from anthropic import Anthropic
 except ImportError:
-    Anthropic = Any  # type: ignore[assignment,misc]
+    Anthropic = Any
 
 logger = structlog.get_logger(__name__)
 
-# Anthropic model used for LLM-assisted remediation reasoning.
-# Override via configs/autonomous_remediator.yaml → serving.llm_model
 _LLM_MODEL: str = "meta-llama/Llama-3.1-70B-Instruct"
 
-
-# ── Enums ─────────────────────────────────────────────────────────────────────
 
 class RemediationAction(Enum):
     FILTER_OUTPUT = "filter_output"
@@ -62,8 +58,6 @@ class RemediationStatus(Enum):
     ESCALATED = "escalated"
 
 
-# ── State ──────────────────────────────────────────────────────────────────────
-
 class RemediatorState(TypedDict):
     """Shared state flowing through the LangGraph agent graph.
 
@@ -78,23 +72,18 @@ class RemediatorState(TypedDict):
     probe_results: Dict[str, float]
     predicted_failure_prob: float
 
-    # Decision-making
     orchestrator_reasoning: str
     selected_action: str
     action_parameters: Dict[str, Any]
 
-    # Execution
     remediation_id: str
     status: str
     action_result: Dict[str, Any]
     error: Optional[str]
 
-    # Audit
     timeline: List[Dict[str, Any]]
     latency_ms: float
 
-
-# ── Data classes ──────────────────────────────────────────────────────────────
 
 @dataclass
 class RemediationDecision:
@@ -142,8 +131,6 @@ class RemediationRecord:
     timestamp_iso: str
 
 
-# ── Individual Action Agents ───────────────────────────────────────────────────
-
 class OutputFilterAgent:
     """Rewrites or truncates unsafe LLM outputs in-flight.
 
@@ -182,7 +169,6 @@ class OutputFilterAgent:
         mode = parameters.get("mode", "rewrite")
 
         if mode == "truncate":
-            # Hard truncate at first unsafe segment
             filtered = original_output[:parameters.get("max_chars", 200)]
             return {
                 "filtered_output": filtered + " [Response truncated for safety]",
@@ -190,7 +176,6 @@ class OutputFilterAgent:
                 "explanation": f"Truncated due to: {risk_categories}",
             }
 
-        # Intelligent rewrite via Anthropic API
         prompt = (
             f"The following AI output was flagged for safety risks: {risk_categories}.\n"
             f"Rewrite it to be helpful while removing the unsafe elements.\n"
@@ -316,7 +301,6 @@ class RollbackAgent:
         mlflow.set_tracking_uri(self._mlflow_uri)
         client = mlflow.tracking.MlflowClient()
 
-        # Find last Production version
         production_versions = client.get_latest_versions(
             self._model_name,
             stages=["Production"],
@@ -335,14 +319,12 @@ class RollbackAgent:
                 "dry_run": True,
             }
 
-        # Transition current to Archived
         client.transition_model_version_stage(
             name=self._model_name,
             version=current_version,
             stage="Archived",
         )
 
-        # Trigger redeployment if callback provided
         deploy_triggered = False
         if self._deploy_fn:
             await self._deploy_fn(model_name=self._model_name, version=safe_version)
@@ -399,7 +381,6 @@ class EscalationAgent:
         """
         incident_id = f"ARGUS-{int(time.time())}-{state['request_id'][:8]}"
 
-        # Generate human-readable summary via Anthropic API
         summary = await self._generate_summary(state)
 
         channels = []
@@ -523,8 +504,6 @@ class EscalationAgent:
             )
 
 
-# ── LangGraph Orchestrator ────────────────────────────────────────────────────
-
 class RemediatorOrchestrator:
     """Builds and runs the LangGraph StateGraph for remediation decisions.
 
@@ -551,7 +530,6 @@ class RemediatorOrchestrator:
         result = await orchestrator.run(state)
     """
 
-    # Triage thresholds
     FILTER_THRESHOLD = 0.40
     QUARANTINE_THRESHOLD = 0.65
     ROLLBACK_THRESHOLD = 0.80
@@ -591,14 +569,12 @@ class RemediatorOrchestrator:
 
         self._add_event(state, "remediation_started")
 
-        # Step 1: Orchestrator decides action via Anthropic API
         decision = await self._orchestrate(state)
         state["selected_action"] = decision.action.value
         state["action_parameters"] = decision.parameters
         state["orchestrator_reasoning"] = decision.reasoning
         self._add_event(state, "action_selected", action=decision.action.value)
 
-        # Step 2: Execute the selected action
         result = await self._execute_action(decision, state)
         state["action_result"] = result
         state["status"] = RemediationStatus.COMPLETED.value
@@ -609,7 +585,6 @@ class RemediatorOrchestrator:
         if state["latency_ms"] > 200:
             logger.warning("remediation_sla_miss", latency_ms=state["latency_ms"])
 
-        # Step 3: Audit log
         if self._audit:
             await self._write_audit(state)
 
@@ -624,7 +599,6 @@ class RemediatorOrchestrator:
         Returns:
             RemediationDecision with selected action and reasoning.
         """
-        # Fast triage without LLM for clear-cut cases
         score = state["composite_score"]
 
         if score < self.FILTER_THRESHOLD:
@@ -643,7 +617,6 @@ class RemediatorOrchestrator:
                 confidence=0.99,
             )
 
-        # Use Anthropic API for nuanced decision in middle range
         prompt = self._build_decision_prompt(state)
         response = self._client.messages.create(
             model=_LLM_MODEL,
@@ -707,7 +680,6 @@ Respond in JSON:
                 confidence=float(data.get("confidence", 0.8)),
             )
         except (json.JSONDecodeError, KeyError, ValueError) as e:
-            # Fallback: rule-based decision
             logger.warning("decision_parse_failed", error=str(e))
             action = (
                 RemediationAction.ROLLBACK_MODEL if score >= 0.80

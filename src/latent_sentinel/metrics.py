@@ -105,7 +105,6 @@ except ImportError:
     COMPOSITE_RISK_SCORE = None 
 
 
-
 try:
     from opentelemetry import trace as _otel_trace
 
@@ -126,9 +125,8 @@ try:
 
 except ImportError:
     _OTEL_AVAILABLE = False
-    tracer = None  # type: ignore[assignment]
+    tracer = None
     logger.warning("opentelemetry_unavailable", hint="pip install opentelemetry-api")
-
 
 
 def record_probe_inference(
@@ -208,7 +206,6 @@ def get_tracer() -> "Optional[_otel_trace.Tracer]":
     return tracer if _OTEL_AVAILABLE else None
 
 
-
 def record_probe_latency(latency_ms: float, model_name: str = "unknown") -> None:
 
     if _PROMETHEUS_AVAILABLE:
@@ -242,7 +239,6 @@ def record_signal_published(risk_level: str) -> None:
 
     if _PROMETHEUS_AVAILABLE:
         _SIGNALS_PUBLISHED_COUNTER.labels(risk_level=risk_level).inc()
-
 
 
 @contextmanager
@@ -287,7 +283,6 @@ def timed_probe(
                 PROBE_LATENCY_MS.labels(category=category).observe(latency_ms)
     else:
         yield
-
 
 
 def start_metrics_server(port: int = 8000) -> None:

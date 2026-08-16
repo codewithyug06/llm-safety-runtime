@@ -46,7 +46,6 @@ def evaluate_oracle(
     """
     from src.predictive_oracle.oracle import PredictiveOracleModel
 
-    # Load test data
     test_path = Path(data_dir) / "fault_injection_test.npz"
     data = np.load(test_path)
     X_test = data["windows"].astype(np.float32)
@@ -55,7 +54,6 @@ def evaluate_oracle(
     seq_len = X_test.shape[1]
     n_features = X_test.shape[2]
 
-    # Load model
     model = PredictiveOracleModel(
         n_features=n_features,
         seq_len=seq_len,
@@ -75,7 +73,6 @@ def evaluate_oracle(
 
     model.eval()
 
-    # Inference
     horizon_labels = ["30s", "60s", "90s"]
     all_probs = {h: [] for h in horizon_labels}
     latencies = []
@@ -83,7 +80,6 @@ def evaluate_oracle(
     batch_size = 64
     with torch.no_grad():
         for i in range(0, len(X_test), batch_size):
-            # Data is (batch, seq_len, n_features); model expects (batch, n_features, seq_len)
             batch = torch.from_numpy(X_test[i:i + batch_size]).permute(0, 2, 1).to(device)
             t0 = time.perf_counter()
             logits = model(batch)
@@ -136,7 +132,6 @@ def main() -> None:
         print("[SKIP] Test data not found. Run: python scripts/generate_fault_injection_dataset.py")
         sys.exit(0)
 
-    # If no trained model exists, skip evaluation (random weights give meaningless metrics)
     if not Path(args.model_path).exists():
         print(f"[SKIP] Trained oracle model not found at: {args.model_path}")
         print("       Run: python scripts/train_oracle.py first.")

@@ -36,7 +36,6 @@ from src.exceptions import InsufficientTelemetryError, OraclePredictionError
 
 logger = structlog.get_logger(__name__)
 
-# How long (seconds) to keep a silent agent's window before evicting
 AGENT_TTL_SECONDS: float = 300.0
 
 
@@ -282,7 +281,6 @@ class TelemetryConsumer:
 
         logger.info("loading_oracle_model", path=str(self._oracle_model_path))
 
-        # Load config for architecture params
         try:
             from src.config import load_oracle_config
             cfg = load_oracle_config()
@@ -339,7 +337,6 @@ class TelemetryConsumer:
         if window_arr is None or len(window_arr) < self._min_window_len:
             return None
 
-        # Pad or truncate to seq_len
         if len(window_arr) < self._seq_len:
             pad_len = self._seq_len - len(window_arr)
             window_arr = np.vstack([np.zeros((pad_len, window_arr.shape[1])), window_arr])
@@ -347,15 +344,14 @@ class TelemetryConsumer:
             window_arr = window_arr[-self._seq_len:]
 
         with torch.no_grad():
-            x = torch.from_numpy(window_arr).unsqueeze(0).to(self._device)  # (1, seq, feats)
-            logits = self._oracle(x)  # (1, n_horizons)
+            x = torch.from_numpy(window_arr).unsqueeze(0).to(self._device)
+            logits = self._oracle(x)
             probs = torch.sigmoid(logits).squeeze(0).cpu().numpy()
 
         risk_30s = float(probs[0]) if len(probs) > 0 else 0.5
         risk_60s = float(probs[1]) if len(probs) > 1 else 0.5
         risk_90s = float(probs[2]) if len(probs) > 2 else 0.5
 
-        # Conformal interval around 60s prediction
         ci_low, ci_high = risk_60s - 0.10, risk_60s + 0.10
         if self._calibrator is not None:
             try:
@@ -411,13 +407,10 @@ class TelemetryConsumer:
         except ImportError:
             raise ImportError("Run: pip install confluent-kafka")
 
-        # Load oracle model
         self._load_oracle()
 
-        # Create Kafka producer (for publishing predictions)
         self._producer = Producer({"bootstrap.servers": self._bootstrap_servers})
 
-        # Create Kafka consumer
         consumer = Consumer({
             "bootstrap.servers": self._bootstrap_servers,
             "group.id": self._consumer_group,
@@ -448,7 +441,6 @@ class TelemetryConsumer:
                         logger.error("kafka_consumer_error", error=str(msg.error()))
                     continue
 
-                # Parse telemetry event
                 try:
                     event = TelemetryEvent.from_kafka_message(msg.value())
                     self._buffer.add(event)
@@ -456,7 +448,6 @@ class TelemetryConsumer:
                     logger.warning("telemetry_parse_error", error=str(exc))
                     continue
 
-                # Run oracle if enough time has elapsed since last prediction
                 agent_id = event.agent_id
                 now = time.monotonic()
                 last_pred_time = self._last_inference.get(agent_id, 0.0)
@@ -483,7 +474,6 @@ class TelemetryConsumer:
                     except Exception as exc:
                         logger.error("oracle_inference_error", agent_id=agent_id, error=str(exc))
 
-                # Periodic stale agent cleanup
                 if now - last_evict_time > 60.0:
                     self._buffer.evict_stale_agents()
                     last_evict_time = now

@@ -40,7 +40,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 logger = structlog.get_logger(__name__)
 
-# ── Feature indices ───────────────────────────────────────────────────────────
 
 N_FEATURES = 9
 IDX_REQUEST_RATE = 0
@@ -53,30 +52,29 @@ IDX_QUEUE_DEPTH = 6
 IDX_CPU_UTIL = 7
 IDX_CONTEXT_FILL = 8
 
-# ── Normal operating baseline ─────────────────────────────────────────────────
 
 BASELINE_MEAN = np.array([
-    50.0,   # request_rate (req/s)
-    0.02,   # error_rate (2%)
-    120.0,  # p95_latency_ms
-    2000.0, # token_throughput
-    0.15,   # safety_score_avg (mostly safe)
-    0.60,   # memory_utilization
-    5.0,    # queue_depth
-    0.45,   # cpu_utilization
-    0.40,   # context_window_fill
+    50.0,
+    0.02,
+    120.0,
+    2000.0,
+    0.15,
+    0.60,
+    5.0,
+    0.45,
+    0.40,
 ], dtype=np.float32)
 
 BASELINE_STD = np.array([
-    10.0,   # request_rate noise
-    0.005,  # error_rate noise
-    15.0,   # latency noise
-    200.0,  # throughput noise
-    0.02,   # safety noise
-    0.05,   # memory noise
-    2.0,    # queue noise
-    0.05,   # cpu noise
-    0.05,   # context noise
+    10.0,
+    0.005,
+    15.0,
+    200.0,
+    0.02,
+    0.05,
+    2.0,
+    0.05,
+    0.05,
 ], dtype=np.float32)
 
 
@@ -95,7 +93,6 @@ def _generate_normal_window(seq_len: int, rng: np.random.Generator) -> np.ndarra
         scale=BASELINE_STD,
         size=(seq_len, N_FEATURES),
     ).astype(np.float32)
-    # Clamp to physically valid ranges
     window[:, IDX_ERROR_RATE] = np.clip(window[:, IDX_ERROR_RATE], 0, 1)
     window[:, IDX_SAFETY_SCORE] = np.clip(window[:, IDX_SAFETY_SCORE], 0, 1)
     window[:, IDX_MEMORY_UTIL] = np.clip(window[:, IDX_MEMORY_UTIL], 0, 1)
@@ -260,13 +257,11 @@ def generate_dataset(
     windows = []
     labels = []
 
-    # Normal episodes
     for _ in range(n_normal):
         w = _generate_normal_window(seq_len, rng)
         windows.append(w)
         labels.append(0)
 
-    # Fault episodes
     for _ in range(n_fault):
         w = _generate_normal_window(seq_len, rng)
         injector = FAULT_INJECTORS[rng.integers(0, len(FAULT_INJECTORS))]
@@ -275,7 +270,6 @@ def generate_dataset(
         windows.append(w)
         labels.append(1)
 
-    # Shuffle
     indices = np.arange(len(windows))
     rng.shuffle(indices)
     windows_arr = np.stack(windows)[indices]
@@ -313,7 +307,6 @@ def main() -> None:
         rng=rng,
     )
 
-    # Split
     n = len(windows)
     n_test = int(n * args.test_split)
     n_val = int(n * args.val_split)
@@ -338,7 +331,6 @@ def main() -> None:
             path=str(path),
         )
 
-    # Print summary
     print(f"\n=== Fault Injection Dataset Generated ===")
     print(f"Total episodes : {n:,}")
     print(f"  Train        : {n_train:,} ({int(labels[:n_train].sum())} faults)")

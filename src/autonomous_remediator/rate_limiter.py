@@ -27,17 +27,11 @@ from src.exceptions import RemediatorError
 
 logger = structlog.get_logger(__name__)
 
-# Window size in seconds for sliding rate limit
 WINDOW_SECONDS: float = 1.0
-# Default max requests per window for a normal agent
 DEFAULT_MAX_REQUESTS: int = 10
-# Default max requests per window for a high-risk agent
 HIGH_RISK_MAX_REQUESTS: int = 3
-# Max violations before triggering soft quarantine
 VIOLATION_THRESHOLD: int = 3
-# Violation counter TTL (60 seconds rolling window)
 VIOLATION_TTL_SECONDS: int = 60
-# Base backoff seconds per violation
 BASE_BACKOFF_SECONDS: float = 2.0
 
 
@@ -117,17 +111,14 @@ class RateLimitAgent:
             window_start = now - WINDOW_SECONDS
             window_key = self._window_key(agent_id)
 
-            pipe = client.pipeline()  # type: ignore[union-attr]
-            # Remove expired entries
+            pipe = client.pipeline()
             pipe.zremrangebyscore(window_key, "-inf", window_start)
-            # Count current window requests
             pipe.zcard(window_key)
             results = pipe.execute()
 
             current_count = results[1]
 
             if current_count >= max_requests:
-                # Record violation
                 violation_count = self._increment_violations(agent_id)
                 wait_ms = self._compute_backoff_ms(violation_count)
                 logger.warning(
@@ -140,8 +131,7 @@ class RateLimitAgent:
                 )
                 return False, wait_ms
 
-            # Allow: record this request in the window
-            pipe2 = client.pipeline()  # type: ignore[union-attr]
+            pipe2 = client.pipeline()
             pipe2.zadd(window_key, {str(uuid.uuid4()): now})
             pipe2.expire(window_key, int(WINDOW_SECONDS * 2))
             pipe2.execute()
@@ -150,7 +140,6 @@ class RateLimitAgent:
 
         except Exception as exc:
             logger.error("rate_limit_check_failed", agent_id=agent_id, error=str(exc))
-            # Fail open: allow the request if Redis is unreachable
             return True, 0.0
 
     def _increment_violations(self, agent_id: str) -> int:
@@ -165,7 +154,7 @@ class RateLimitAgent:
         try:
             client = self._get_client()
             vkey = self._violation_key(agent_id)
-            pipe = client.pipeline()  # type: ignore[union-attr]
+            pipe = client.pipeline()
             pipe.incr(vkey)
             pipe.expire(vkey, VIOLATION_TTL_SECONDS)
             results = pipe.execute()
@@ -204,7 +193,7 @@ class RateLimitAgent:
         """
         try:
             client = self._get_client()
-            val = client.get(self._violation_key(agent_id))  # type: ignore[union-attr]
+            val = client.get(self._violation_key(agent_id))
             return int(val) if val else 0
         except Exception:
             return 0
@@ -228,7 +217,7 @@ class RateLimitAgent:
         """
         try:
             client = self._get_client()
-            client.delete(self._violation_key(agent_id))  # type: ignore[union-attr]
+            client.delete(self._violation_key(agent_id))
             logger.info("violations_reset", agent_id=agent_id)
         except Exception as exc:
             logger.error("violation_reset_failed", agent_id=agent_id, error=str(exc))
@@ -246,7 +235,7 @@ class RateLimitAgent:
             client = self._get_client()
             now = time.time()
             window_start = now - WINDOW_SECONDS
-            count = client.zcount(  # type: ignore[union-attr]
+            count = client.zcount(
                 self._window_key(agent_id), window_start, now
             )
             return int(count)

@@ -1,11 +1,9 @@
 
 thresholds:
-  # Risk score decision ladder (0.0 – 1.0 composite safety score)
-  no_action_below: 0.40       # no action taken
-  filter_output_below: 0.65   # OutputFilterAgent
-  quarantine_below: 0.80      # QuarantineAgent
-  rollback_below: 0.90        # RollbackAgent
-                               # EscalationAgent (human)
+  no_action_below: 0.40
+  filter_output_below: 0.65
+  quarantine_below: 0.80
+  rollback_below: 0.90
 
 serving:
   max_latency_ms: 200.0       

@@ -26,7 +26,6 @@ from src.latent_sentinel.sentinel import (
 logger = structlog.get_logger(__name__)
 
 
-
 class _BenchmarkInner(nn.Module):
 
     def __init__(self, num_layers: int, hidden_dim: int) -> None:
@@ -136,7 +135,6 @@ def run_benchmark(
     return results
 
 
-
 def write_report(results: Dict[str, float], model_name: str, device: str) -> Path:
 
     report_dir = Path("docs/benchmarks")
@@ -198,7 +196,7 @@ def main() -> None:
 
     cfg = load_sentinel_config()
 
-    hidden_dim = 4096  # Llama 3.1 8B
+    hidden_dim = 4096
     if "gemma" in args.model.lower():
         hidden_dim = 3072
 

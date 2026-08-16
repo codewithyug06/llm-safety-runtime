@@ -25,7 +25,7 @@ try:
     import jax.numpy as jnp
 except ImportError:
     jax = None
-    import numpy as jnp  # type: ignore
+    import numpy as jnp
 
 import numpy as np
 import pytest
@@ -45,8 +45,6 @@ from src.causal_engine.intervention import (
 )
 from src.exceptions import CausalGraphNotFoundError, InterventionError
 
-
-# ── Fixtures ──────────────────────────────────────────────────────────────────
 
 MODEL_ID = "llama-3.1-8b-stub"
 
@@ -99,7 +97,7 @@ def causal_graph(head_a: HeadSignature, head_b: HeadSignature, head_c: HeadSigna
         CausalEdge(
             head=head_a,
             behavior_category="hallucination",
-            causal_effect=0.10,  # below default min_effect=0.15
+            causal_effect=0.10,
             ablation_delta=0.03,
             patching_delta=0.02,
             confidence=0.60,
@@ -108,8 +106,6 @@ def causal_graph(head_a: HeadSignature, head_b: HeadSignature, head_c: HeadSigna
     ]
     return CausalGraph(model_id=MODEL_ID, edges=edges, version=1)
 
-
-# ── HeadSignature Tests ───────────────────────────────────────────────────────
 
 class TestHeadSignature:
     def test_equality(self) -> None:
@@ -145,8 +141,6 @@ class TestHeadSignature:
         assert "llama-8b" in str(h)
 
 
-# ── CausalEdge Tests ──────────────────────────────────────────────────────────
-
 class TestCausalEdge:
     def test_fields_accessible(self, head_a: HeadSignature) -> None:
         edge = CausalEdge(
@@ -173,8 +167,6 @@ class TestCausalEdge:
         assert 0.0 <= edge.causal_effect <= 1.0
 
 
-# ── CausalGraph Tests ─────────────────────────────────────────────────────────
-
 class TestCausalGraph:
     def test_get_unsafe_heads_returns_correct_category(
         self, causal_graph: CausalGraph, head_a: HeadSignature, head_b: HeadSignature
@@ -189,16 +181,14 @@ class TestCausalGraph:
         hallucination_heads = causal_graph.get_unsafe_heads(
             "hallucination", min_effect=0.15
         )
-        # head_a has causal_effect=0.10 for hallucination → filtered out
         assert head_a not in hallucination_heads
 
     def test_get_unsafe_heads_sorted_by_effect_descending(
         self, causal_graph: CausalGraph
     ) -> None:
         heads = causal_graph.get_unsafe_heads("jailbreak")
-        # head_a has effect 0.72, head_b has 0.45 → head_a should be first
-        assert heads[0].head_idx == 3  # head_a
-        assert heads[1].head_idx == 7  # head_b
+        assert heads[0].head_idx == 3
+        assert heads[1].head_idx == 7
 
     def test_empty_category_returns_empty_list(
         self, causal_graph: CausalGraph
@@ -214,8 +204,6 @@ class TestCausalGraph:
     def test_edge_count(self, causal_graph: CausalGraph) -> None:
         assert len(causal_graph.edges) == 4
 
-
-# ── InterventionSpec / InterventionResult Tests ────────────────────────────────
 
 class TestInterventionSpec:
     def test_heads_is_a_set(
@@ -282,8 +270,6 @@ class TestInterventionResult:
         assert result.latency_ms >= 0
 
 
-# ── JAX Function Tests ────────────────────────────────────────────────────────
-
 class TestScaleAttentionWeights:
     def test_unmasked_heads_unchanged(self) -> None:
         batch, heads, seq = 1, 4, 8
@@ -301,13 +287,11 @@ class TestScaleAttentionWeights:
         scale_factors = jnp.array([1.0, 1.0, 0.3, 1.0])
 
         result = scale_attention_weights(attn, head_mask, scale_factors)
-        # Head 2 should be scaled by 0.3
         np.testing.assert_allclose(
             np.array(result[0, 2]),
             np.full((seq, seq), 0.3),
             atol=1e-6,
         )
-        # Other heads unchanged
         np.testing.assert_allclose(np.array(result[0, 0]), np.ones((seq, seq)), atol=1e-6)
 
     def test_output_shape_preserved(self) -> None:
@@ -353,10 +337,8 @@ class TestComputeAblationEffect:
         probe_weights = jnp.ones(dim) / dim
 
         effect = compute_ablation_effect(original, ablated, probe_weights)
-        assert effect.shape == () or np.ndim(effect) == 0  # scalar
+        assert effect.shape == () or np.ndim(effect) == 0
 
-
-# ── CausalScrubber Tests (mocked) ─────────────────────────────────────────────
 
 class TestCausalScrubber:
     def test_init(self) -> None:
@@ -381,7 +363,6 @@ class TestCausalScrubber:
             target_layers=[4, 8],
         )
 
-        # Patch internal ablation to return fixed deltas
         with patch.object(scrubber, "_run_ablation_study", return_value=[
             CausalEdge(
                 head=HeadSignature(layer_idx=4, head_idx=0, model_id=MODEL_ID),
@@ -402,8 +383,6 @@ class TestCausalScrubber:
         assert len(graph.edges) >= 1
 
 
-# ── CausalInterventionEngine Tests ────────────────────────────────────────────
-
 class TestCausalInterventionEngine:
     def test_no_intervention_below_threshold(
         self, causal_graph: CausalGraph
@@ -413,7 +392,7 @@ class TestCausalInterventionEngine:
             intervention_threshold=0.65,
         )
         mock_signal = MagicMock()
-        mock_signal.composite_risk_score = 0.40  # Below threshold
+        mock_signal.composite_risk_score = 0.40
 
         result = engine.maybe_intervene(mock_signal)
         assert result is None
@@ -428,7 +407,6 @@ class TestCausalInterventionEngine:
         mock_signal = MagicMock()
         mock_signal.composite_risk_score = 0.85
         mock_signal.risk_level.name = "HIGH"
-        # Simulate probe scores indicating jailbreak
         mock_signal.probe_scores = {MagicMock(): 0.90}
 
         spec = engine.build_intervention_spec(mock_signal, category="jailbreak")
@@ -459,7 +437,6 @@ class TestCausalInterventionEngine:
         )
         mock_signal = MagicMock()
         mock_signal.composite_risk_score = 0.85
-        # Use string keys that match categories in the causal_graph fixture
         mock_signal.probe_scores = {"jailbreak": 0.90, "hallucination": 0.75}
 
         result = engine.maybe_intervene(mock_signal)
@@ -506,8 +483,6 @@ class TestCausalInterventionEngine:
         assert "0.82" in spec.reason
 
 
-# ── CausalScrubber Ablation Study Tests ───────────────────────────────────────
-
 class TestCausalScrubberAblationStudy:
     def test_ablation_study_finds_edges_above_threshold(self) -> None:
         """High-magnitude activations should produce detectable causal edges."""
@@ -516,13 +491,11 @@ class TestCausalScrubberAblationStudy:
             num_layers=2,
             num_heads=4,
         )
-        # Shape: (seq=8, heads=4, d_head=16)
         rng = np.random.default_rng(42)
         activations_by_layer: Dict[int, np.ndarray] = {
             0: rng.normal(size=(8, 4, 16)).astype(np.float32),
             1: rng.normal(size=(8, 4, 16)).astype(np.float32),
         }
-        # Probe weights shape: (hidden,) = (16,)
         probe_weights = {
             "jailbreak": np.ones(16, dtype=np.float32) / 16,
             "hallucination": np.ones(16, dtype=np.float32) / 16,
@@ -531,10 +504,9 @@ class TestCausalScrubberAblationStudy:
             activations_by_layer=activations_by_layer,
             probe_weights=probe_weights,
             categories=["jailbreak", "hallucination"],
-            min_delta_threshold=0.0,  # capture all edges
+            min_delta_threshold=0.0,
         )
         assert isinstance(edges, list)
-        # 2 layers × 4 heads × 2 categories = 16 candidate edges (some may be filtered)
         assert len(edges) <= 16
 
     def test_ablation_study_returns_causal_edge_objects(self) -> None:
@@ -561,9 +533,7 @@ class TestCausalScrubberAblationStudy:
         scrubber = CausalScrubber(model_id=MODEL_ID, num_layers=1, num_heads=4)
         acts = np.ones((8, 4, 16), dtype=np.float32)
         ablated = scrubber._ablate_head(acts, head_idx=2)
-        # Head 2 should be zeroed
         np.testing.assert_array_equal(ablated[:, 2, :], 0.0)
-        # Other heads unchanged
         np.testing.assert_array_equal(ablated[:, 0, :], 1.0)
         np.testing.assert_array_equal(ablated[:, 1, :], 1.0)
         np.testing.assert_array_equal(ablated[:, 3, :], 1.0)

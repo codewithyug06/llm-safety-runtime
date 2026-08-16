@@ -31,8 +31,6 @@ import structlog
 logger = structlog.get_logger(__name__)
 
 
-# ── Enums ────────────────────────────────────────────────────────────────────
-
 class ProbeCategory(Enum):
     HALLUCINATION = auto()
     JAILBREAK = auto()
@@ -49,8 +47,6 @@ class RiskLevel(Enum):
     HIGH = "high"
     CRITICAL = "critical"
 
-
-# ── Data classes ─────────────────────────────────────────────────────────────
 
 @dataclass
 class ActivationBundle:
@@ -111,8 +107,6 @@ class SafetySignal:
     triggered_early: bool
     alert_tokens_ahead: int = 0
 
-
-# ── Probe Interface ───────────────────────────────────────────────────────────
 
 class BaseProbe(nn.Module):
     """Abstract base for all probing classifiers.
@@ -189,22 +183,18 @@ class LinearResidualProbe(BaseProbe):
         Returns:
             Tuple of (risk_score, confidence).
         """
-        # Mean pool over sequence dimension → shape: (batch, hidden_dim)
         pooled = bundle.residual_stream.mean(dim=1).float()
 
         with torch.no_grad():
             logits = self.net(pooled)
             probs = logits.softmax(dim=-1)
 
-        risk_score = float(probs[0, 1])  # P(unsafe)
-        # Confidence = 1 - normalized entropy
+        risk_score = float(probs[0, 1])
         entropy = -(probs * probs.clamp(min=1e-9).log()).sum(dim=-1)
         confidence = float(1.0 - entropy[0] / torch.log(torch.tensor(2.0)))
 
         return risk_score, confidence
 
-
-# ── Hook Manager ──────────────────────────────────────────────────────────────
 
 class HookManager:
     """Attaches non-blocking forward hooks to transformer layers.
@@ -286,7 +276,6 @@ class HookManager:
         Returns:
             List of layer modules ordered by index.
         """
-        # Support common HuggingFace architectures
         if hasattr(self._model, "model") and hasattr(self._model.model, "layers"):
             return list(self._model.model.layers)
         if hasattr(self._model, "transformer") and hasattr(self._model.transformer, "h"):
@@ -317,13 +306,12 @@ class HookManager:
         ) -> None:
             ts = time.monotonic_ns()
 
-            # Extract tensors safely (detach to avoid affecting gradients)
             hidden_state = outputs[0].detach() if isinstance(outputs, tuple) else outputs.detach()
 
             bundle = ActivationBundle(
                 layer_idx=layer_idx,
                 residual_stream=hidden_state,
-                attention_patterns=None,  # populated if attention hook registered separately
+                attention_patterns=None,
                 mlp_activations=None,
                 timestamp_ns=ts,
                 request_id=request_id_fn() if request_id_fn else "unknown",
@@ -337,8 +325,6 @@ class HookManager:
 
         return hook
 
-
-# ── Probe Registry ────────────────────────────────────────────────────────────
 
 class ProbeRegistry:
     """Manages all probing classifiers and aggregates their outputs.
@@ -359,7 +345,6 @@ class ProbeRegistry:
         signal = registry.dispatch(bundle)
     """
 
-    # Risk level thresholds for composite score
     RISK_THRESHOLDS = {
         RiskLevel.CRITICAL: 0.85,
         RiskLevel.HIGH: 0.65,
@@ -412,7 +397,6 @@ class ProbeRegistry:
                     error=str(e),
                 )
 
-        # Aggregate to composite signal
         composite = self._aggregate(probe_results, bundle.layer_idx)
         risk_level = self._classify_risk(composite)
         total_ms = (time.monotonic_ns() - t0) / 1e6
@@ -451,7 +435,6 @@ class ProbeRegistry:
         if not results:
             return 0.0
 
-        # Category weights: jailbreak and toxic reasoning are more severe
         category_weights = {
             ProbeCategory.HALLUCINATION: 0.20,
             ProbeCategory.JAILBREAK: 0.35,
@@ -490,8 +473,6 @@ class ProbeRegistry:
                 return level
         return RiskLevel.SAFE
 
-
-# ── LatentSentinel: Top-level façade ─────────────────────────────────────────
 
 class LatentSentinel:
     """Top-level interface for MOD-01. Wire this to any HuggingFace transformer.
@@ -548,7 +529,6 @@ class LatentSentinel:
         self._device = device
         self._active = False
 
-        # MOD-03 OmniSafetyCritic integration
         self._critic_endpoint = critic_endpoint
         self._critic_blend_weight = max(0.0, min(1.0, critic_blend_weight))
         self._critic_timeout_ms = critic_timeout_ms
@@ -604,7 +584,7 @@ class LatentSentinel:
         try:
             from src.safety_critic.critic import ContentModality, CriticInput
             critic_input = CriticInput(
-                content=content[:2048],  # truncate to server max
+                content=content[:2048],
                 modality=ContentModality.TEXT,
             )
             critic_output = await self._critic_client.score(critic_input)
@@ -612,7 +592,6 @@ class LatentSentinel:
             blended = (1.0 - w) * signal.composite_score + w * critic_output.safety_score
             blended = max(0.0, min(1.0, blended))
 
-            # Re-classify risk level with blended score
             risk_level = self._probe_registry._classify_risk(blended)
             object.__setattr__(signal, "composite_score", blended)
             object.__setattr__(signal, "risk_level", risk_level)
@@ -624,7 +603,6 @@ class LatentSentinel:
                 blended=f"{blended:.3f}",
             )
         except Exception as exc:
-            # Critic call failure must never break the probe path
             logger.warning("critic_blend_failed", error=str(exc))
 
         return signal

@@ -28,7 +28,6 @@ from src.exceptions import MLflowRegistryError
 
 logger = structlog.get_logger(__name__)
 
-# Safety gate: minimum accuracy required to promote to Production
 DEFAULT_MIN_SAFETY_ACCURACY: float = 0.85
 DEFAULT_MIN_F1: float = 0.78
 
@@ -125,7 +124,6 @@ class ArgusModelRegistry:
             version = mv.version
 
             client = self._get_client()
-            # Set to Staging first
             client.transition_model_version_stage(
                 name=model_name, version=version, stage="Staging"
             )
@@ -179,14 +177,12 @@ class ArgusModelRegistry:
         try:
             client = self._get_client()
 
-            # Find version to promote
             if version is None:
                 staging_versions = client.get_latest_versions(model_name, stages=["Staging"])
                 if not staging_versions:
                     raise MLflowRegistryError(f"No Staging version found for {model_name}")
                 version = staging_versions[0].version
 
-            # Check metrics gate
             if not force:
                 metrics = self._get_run_metrics(client, model_name, version)
                 accuracy = metrics.get("safety_accuracy", metrics.get("eval_accuracy", 0.0))
@@ -209,7 +205,6 @@ class ArgusModelRegistry:
                     f1=f"{f1:.4f}",
                 )
 
-            # Archive current Production
             current_prod = client.get_latest_versions(model_name, stages=["Production"])
             for cv in current_prod:
                 client.transition_model_version_stage(
@@ -217,7 +212,6 @@ class ArgusModelRegistry:
                 )
                 logger.info("previous_version_archived", model=model_name, version=cv.version)
 
-            # Promote to Production
             client.transition_model_version_stage(
                 name=model_name,
                 version=version,
@@ -257,14 +251,12 @@ class ArgusModelRegistry:
         try:
             client = self._get_client()
 
-            # Archive current Production
             current = client.get_latest_versions(model_name, stages=["Production"])
             for cv in current:
                 client.transition_model_version_stage(
                     name=model_name, version=cv.version, stage="Archived"
                 )
 
-            # Restore target version
             client.transition_model_version_stage(
                 name=model_name,
                 version=str(version),

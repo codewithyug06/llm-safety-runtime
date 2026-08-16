@@ -113,9 +113,8 @@ def train_epoch(
         labels_batch = labels_batch.float().to(device)
 
         optimizer.zero_grad()
-        logits = model(windows_batch)  # (batch, n_horizons)
+        logits = model(windows_batch)
 
-        # Use 60s horizon (index 1 in [30, 60, 90])
         loss = criterion(logits[:, 1], labels_batch)
         loss.backward()
         nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -132,7 +131,7 @@ def evaluate(
     model: PredictiveOracleModel,
     loader: DataLoader,
     device: str,
-    horizon_idx: int = 1,  # 60s horizon
+    horizon_idx: int = 1,
 ) -> Dict[str, float]:
     """Evaluate model on a DataLoader.
 
@@ -214,7 +213,6 @@ def main() -> None:
         device=args.device,
     )
 
-    # Load data splits
     X_train, y_train = load_split(data_dir, "train")
     X_val, y_val = load_split(data_dir, "val")
     X_test, y_test = load_split(data_dir, "test")
@@ -235,7 +233,6 @@ def main() -> None:
         print("\nDry run complete.")
         return
 
-    # Load config (for model architecture)
     try:
         cfg = load_oracle_config()
         hidden_dim = cfg.model.hidden_dim
@@ -246,7 +243,6 @@ def main() -> None:
         num_features = cfg.model.num_features
         forecast_horizons = cfg.model.forecast_horizons
     except Exception:
-        # Fallback defaults matching predictive_oracle.yaml
         hidden_dim, num_heads, num_layers = 128, 8, 3
         patch_len, stride, num_features = 12, 6, 9
         forecast_horizons = [30, 60, 90]
@@ -254,8 +250,6 @@ def main() -> None:
     seq_len = X_train.shape[1]
     n_horizons = len(forecast_horizons)
 
-    # Build model — PredictiveOracleModel expects (batch, n_features, seq_len)
-    # so we transpose data after loading: (N, seq_len, n_features) → (N, n_features, seq_len)
     X_train = X_train.transpose(0, 2, 1)
     X_val   = X_val.transpose(0, 2, 1)
     X_test  = X_test.transpose(0, 2, 1)
@@ -274,17 +268,14 @@ def main() -> None:
     n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logger.info("model_built", params=n_params, device=args.device)
 
-    # DataLoaders
     train_loader = build_dataloader(X_train, y_train, args.batch_size, shuffle=True)
     val_loader = build_dataloader(X_val, y_val, args.batch_size, shuffle=False)
     test_loader = build_dataloader(X_test, y_test, args.batch_size, shuffle=False)
 
-    # Optimizer + scheduler + loss
     optimizer = AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
     scheduler = CosineAnnealingLR(optimizer, T_max=args.epochs)
     criterion = nn.BCEWithLogitsLoss()
 
-    # MLflow setup
     try:
         import mlflow
         mlflow.set_experiment(args.mlflow_experiment)
@@ -302,7 +293,6 @@ def main() -> None:
     except Exception:
         _mlflow_active = False
 
-    # W&B setup
     if not args.skip_wandb:
         try:
             import wandb
@@ -310,7 +300,6 @@ def main() -> None:
         except Exception:
             pass
 
-    # Training loop with early stopping
     best_val_f1 = 0.0
     patience_counter = 0
     best_model_path = output_dir / "patchtst_best.pt"
@@ -345,7 +334,6 @@ def main() -> None:
                 step=epoch,
             )
 
-        # Early stopping on val F1
         if val_metrics["f1"] > best_val_f1:
             best_val_f1 = val_metrics["f1"]
             patience_counter = 0
@@ -357,21 +345,18 @@ def main() -> None:
                 logger.info("early_stopping", epoch=epoch, patience=args.patience)
                 break
 
-    # Load best checkpoint
     model.load_state_dict(torch.load(best_model_path, map_location=args.device))
     logger.info("best_model_loaded", path=str(best_model_path))
 
-    # Calibrate conformal predictor on val set
     logger.info("calibrating_conformal_predictor")
     calibrator = ConformalCalibrator(coverage=0.9)
 
-    # Collect val probabilities for calibration
     model.eval()
     val_probs = []
     with torch.no_grad():
         for windows_batch, _ in val_loader:
             logits = model(windows_batch.to(args.device))
-            probs = torch.sigmoid(logits[:, 1]).cpu().numpy()  # 60s horizon
+            probs = torch.sigmoid(logits[:, 1]).cpu().numpy()
             val_probs.extend(probs.tolist())
 
     calibrator.fit(np.array(val_probs), y_val)
@@ -380,11 +365,9 @@ def main() -> None:
         pickle.dump(calibrator, f)
     logger.info("calibrator_saved", path=str(calibrator_path))
 
-    # Final evaluation on test set
     test_metrics = evaluate(model, test_loader, args.device)
     logger.info("test_evaluation_complete", **{k: f"{v:.4f}" for k, v in test_metrics.items()})
 
-    # Save final model
     final_model_path = output_dir / "patchtst.pt"
     torch.save(model.state_dict(), final_model_path)
 
@@ -403,7 +386,6 @@ def main() -> None:
     except Exception:
         pass
 
-    # Print summary
     print(f"\n=== PredictiveOracle Training Complete ===")
     print(f"  Epochs        : {args.epochs} (best at patience stop)")
     print(f"  Best val F1   : {best_val_f1:.4f}")

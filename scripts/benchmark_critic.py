@@ -60,7 +60,6 @@ BENCHMARK_PROMPTS: List[Dict] = [
 ]
 
 
-
 class _MockCriticModel:
     def is_loaded(self) -> bool:
         return True
@@ -74,7 +73,6 @@ class _MockCriticModel:
             latency_ms=0.1,
             model_version="mock-v0",
         )
-
 
 
 def _run_single_benchmark(
@@ -241,7 +239,6 @@ def write_benchmark_report(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines), encoding="utf-8")
     logger.info("benchmark_report_written", path=str(output_path))
-
 
 
 def main() -> None:
