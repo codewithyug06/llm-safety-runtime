@@ -30,7 +30,11 @@ from enum import Enum, auto
 from typing import Annotated, Any, Dict, List, Optional, TypedDict
 
 import structlog
-from anthropic import Anthropic
+
+try:
+    from anthropic import Anthropic
+except ImportError:
+    Anthropic = Any  # type: ignore[assignment,misc]
 
 logger = structlog.get_logger(__name__)
 

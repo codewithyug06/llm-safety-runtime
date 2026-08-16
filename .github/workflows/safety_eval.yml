@@ -66,7 +66,7 @@ jobs:
         run: |
           pip install pytest pytest-cov pytest-asyncio pytest-timeout pytest-mock
           pip install numpy structlog pydantic pydantic-settings fastapi httpx \
-                      scikit-learn scipy mlflow langgraph transformers
+                      scikit-learn scipy mlflow langgraph transformers pyyaml omegaconf
 
       - name: Install PyTorch (CPU)
         run: pip install torch --index-url https://download.pytorch.org/whl/cpu
@@ -118,7 +118,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install torch --index-url https://download.pytorch.org/whl/cpu
-          pip install numpy structlog pydantic pydantic-settings scikit-learn
+          pip install numpy structlog pydantic pydantic-settings scikit-learn pyyaml omegaconf
 
       - name: Run LatentSentinel benchmark (assert p95 < 10ms)
         run: python scripts/benchmark_sentinel.py --assert-sla --num-requests 200
@@ -150,7 +150,7 @@ jobs:
         run: |
           pip install pytest pytest-asyncio pytest-timeout pytest-mock
           pip install torch --index-url https://download.pytorch.org/whl/cpu
-          pip install numpy structlog pydantic pydantic-settings fastapi httpx langgraph
+          pip install numpy structlog pydantic pydantic-settings fastapi httpx langgraph pyyaml omegaconf anthropic
 
       - name: Run e2e pipeline tests (mocked Kafka/Redis/Spanner)
         run: |
