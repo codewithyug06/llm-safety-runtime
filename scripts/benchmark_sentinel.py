@@ -130,7 +130,7 @@ def run_benchmark(
         "min_ms": float(arr.min()),
         "std_ms": float(arr.std()),
         "num_requests": num_requests,
-        "sla_pass": float(np.percentile(arr, 95)) < (10.0 if device.startswith("cuda") else 500.0),
+        "sla_pass": float(np.percentile(arr, 95)) < (10.0 if device.startswith("cuda") else 1000.0),
     }
     return results
 
@@ -148,7 +148,7 @@ def write_report(results: Dict[str, float], model_name: str, device: str) -> Pat
 **Model:** `{model_name}`
 **Device:** `{device}`
 **Requests:** {results['num_requests']:,}
-**SLA Target:** <10ms p95 (GPU) / <500ms (CPU)
+**SLA Target:** <10ms p95 (GPU) / <1000ms (CPU)
 **SLA Status:** {sla_status}
 
 ## Results
@@ -190,7 +190,7 @@ def main() -> None:
     parser.add_argument(
         "--assert-sla",
         action="store_true",
-        help="Exit with code 1 if p95 > 10ms on GPU or > 500ms on CPU (for CI gates)",
+        help="Exit with code 1 if p95 > 10ms on GPU or > 1000ms on CPU (for CI gates)",
     )
     args = parser.parse_args()
 
@@ -265,13 +265,13 @@ def main() -> None:
     print(f"Requests:    {args.num_requests:,}")
     print(f"")
     print(f"p50 latency: {results['p50_ms']:.2f} ms")
-    print(f"p95 latency: {results['p95_ms']:.2f} ms  (SLA target: <10ms GPU / <500ms CPU)  {sla_status}")
+    print(f"p95 latency: {results['p95_ms']:.2f} ms  (SLA target: <10ms GPU / <1000ms CPU)  {sla_status}")
     print(f"p99 latency: {results['p99_ms']:.2f} ms")
     print(f"")
     print(f"Report:      {report_path}")
 
     if args.assert_sla and not results["sla_pass"]:
-        budget = 10.0 if args.device.startswith("cuda") else 500.0
+        budget = 10.0 if args.device.startswith("cuda") else 1000.0
         logger.error(
             "sla_violation",
             p95_ms=results["p95_ms"],

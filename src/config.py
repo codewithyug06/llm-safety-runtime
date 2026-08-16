@@ -1,14 +1,3 @@
-"""
-ARGUS Configuration Loader
-============================
-Loads YAML config files from configs/ and exposes them as Pydantic Settings models.
-All modules import their config from here — never hardcode values.
-
-Usage:
-    from src.config import load_sentinel_config, load_oracle_config
-    cfg = load_sentinel_config()
-    threshold = cfg.probes.hallucination.threshold
-"""
 
 from __future__ import annotations
 
