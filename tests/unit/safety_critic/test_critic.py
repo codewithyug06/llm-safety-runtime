@@ -229,31 +229,18 @@ class TestOmniSafetyCriticModel:
         """Test that load() sets _model — using a mock to avoid real HF download."""
         mock_processor = MagicMock()
         mock_base_model = MagicMock()
-        mock_base_model.generate.return_value = MagicMock(
-            __getitem__=lambda self, idx: MagicMock()
-        )
+        mock_llava = MagicMock()
+        mock_llava.from_pretrained.return_value = mock_base_model
+        mock_proc = MagicMock()
+        mock_proc.from_pretrained.return_value = mock_processor
 
-        with patch(
-            "src.safety_critic.critic.LlavaNextForConditionalGeneration.from_pretrained",
-            return_value=mock_base_model,
-        ), patch(
-            "src.safety_critic.critic.AutoProcessor.from_pretrained",
-            return_value=mock_processor,
-        ):
-            # We need to mock the transformers imports inside critic.py
-            import importlib
-            import sys
-            # Mock transformers in the import namespace
-            fake_transformers = MagicMock()
-            fake_transformers.AutoProcessor.from_pretrained.return_value = mock_processor
-            fake_transformers.LlavaNextForConditionalGeneration.from_pretrained.return_value = (
-                mock_base_model
-            )
-
-            model = OmniSafetyCriticModel(model_name="fake/model", device="cpu")
-            model._model = mock_base_model  # inject directly
-            model._processor = mock_processor
+        with patch("src.safety_critic.critic.LlavaNextForConditionalGeneration", mock_llava), \
+             patch("src.safety_critic.critic.AutoProcessor", mock_proc):
+            model = OmniSafetyCriticModel(model_name="llava-hf/llava-v1.6-mistral-7b-hf", device="cpu")
+            model.load()
             assert model.is_loaded() is True
+            assert model._model == mock_base_model
+            assert model._processor == mock_processor
 
     def test_score_returns_critic_output(self) -> None:
         """Test score() returns CriticOutput in [0,1] using mocked model."""
