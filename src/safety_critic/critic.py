@@ -405,11 +405,13 @@ class OmniSafetyCriticClient:
 
     def __init__(
         self,
-        endpoint: str = "http://localhost:8001",
+        endpoint: Optional[str] = None,
         timeout_ms: float = 80.0,
         model_version: str = "unknown",
     ) -> None:
-        self._endpoint = endpoint.rstrip("/")
+        from src.config import load_env_settings
+        endpoint_to_use = endpoint or load_env_settings().safety_critic_endpoint
+        self._endpoint = endpoint_to_use.rstrip("/")
         self._timeout_s = timeout_ms / 1000.0
         self._model_version = model_version
 

@@ -53,11 +53,12 @@ class RedisQuarantineStore:
 
     def __init__(
         self,
-        redis_url: str = "redis://localhost:6379/0",
+        redis_url: Optional[str] = None,
         default_ttl_s: int = 300,
         key_prefix: str = "argus:quarantine:",
     ) -> None:
-        self._redis_url = redis_url
+        from src.config import load_env_settings
+        self._redis_url = redis_url or load_env_settings().redis_url
         self._default_ttl_s = default_ttl_s
         self._key_prefix = key_prefix
         self._client: Optional[Any] = None
@@ -175,8 +176,9 @@ class MLflowRollbackClient:
         client.rollback("argus-safety-critic", version=3)
     """
 
-    def __init__(self, tracking_uri: str = "http://localhost:5000") -> None:
-        self._tracking_uri = tracking_uri
+    def __init__(self, tracking_uri: Optional[str] = None) -> None:
+        from src.config import load_env_settings
+        self._tracking_uri = tracking_uri or load_env_settings().mlflow_tracking_uri
         self._client: Optional[Any] = None
 
     def _get_client(self) -> Any:

@@ -20,7 +20,13 @@ from pathlib import Path
 from typing import Dict, List
 from unittest.mock import MagicMock, patch
 
-import jax.numpy as jnp
+try:
+    import jax
+    import jax.numpy as jnp
+except ImportError:
+    jax = None
+    import numpy as jnp  # type: ignore
+
 import numpy as np
 import pytest
 
@@ -339,13 +345,15 @@ class TestComputeAblationEffect:
 
     def test_output_is_scalar(self) -> None:
         dim = 16
-        import jax
-        original = jax.random.normal(jax.random.PRNGKey(0), (1, 4, dim))
+        if jax is not None:
+            original = jax.random.normal(jax.random.PRNGKey(0), (1, 4, dim))
+        else:
+            original = np.random.randn(1, 4, dim)
         ablated = jnp.zeros((1, 4, dim))
         probe_weights = jnp.ones(dim) / dim
 
         effect = compute_ablation_effect(original, ablated, probe_weights)
-        assert effect.shape == ()  # scalar
+        assert effect.shape == () or np.ndim(effect) == 0  # scalar
 
 
 # ── CausalScrubber Tests (mocked) ─────────────────────────────────────────────

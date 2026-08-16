@@ -38,6 +38,8 @@ class ProbeCategory(Enum):
     JAILBREAK = auto()
     TOXIC_REASONING = auto()
     POLICY_VIOLATION = auto()
+    PROMPT_INJECTION = auto()
+    PII_LEAKAGE = auto()
 
 
 class RiskLevel(Enum):
@@ -455,6 +457,8 @@ class ProbeRegistry:
             ProbeCategory.JAILBREAK: 0.35,
             ProbeCategory.TOXIC_REASONING: 0.30,
             ProbeCategory.POLICY_VIOLATION: 0.15,
+            ProbeCategory.PROMPT_INJECTION: 0.30,
+            ProbeCategory.PII_LEAKAGE: 0.25,
         }
 
         weighted_sum = sum(

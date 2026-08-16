@@ -63,13 +63,14 @@ class RateLimitAgent:
 
     def __init__(
         self,
-        redis_url: str = "redis://localhost:6379/0",
+        redis_url: Optional[str] = None,
         default_max_requests: int = DEFAULT_MAX_REQUESTS,
         high_risk_max_requests: int = HIGH_RISK_MAX_REQUESTS,
         violation_threshold: int = VIOLATION_THRESHOLD,
         key_prefix: str = "argus:ratelimit:",
     ) -> None:
-        self._redis_url = redis_url
+        from src.config import load_env_settings
+        self._redis_url = redis_url or load_env_settings().redis_url
         self._default_max = default_max_requests
         self._high_risk_max = high_risk_max_requests
         self._violation_threshold = violation_threshold

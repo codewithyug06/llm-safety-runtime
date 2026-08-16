@@ -71,6 +71,8 @@ class ProbesConfig(BaseModel):
     jailbreak: ProbeConfig = Field(default_factory=ProbeConfig)
     toxic_reasoning: ProbeConfig = Field(default_factory=ProbeConfig)
     policy_violation: ProbeConfig = Field(default_factory=ProbeConfig)
+    prompt_injection: ProbeConfig = Field(default_factory=ProbeConfig)
+    pii_leakage: ProbeConfig = Field(default_factory=ProbeConfig)
 
 
 class HooksConfig(BaseModel):
@@ -85,6 +87,8 @@ class AggregationConfig(BaseModel):
             "jailbreak": 0.35,
             "toxic_reasoning": 0.30,
             "policy_violation": 0.15,
+            "prompt_injection": 0.30,
+            "pii_leakage": 0.25,
         }
     )
     layer_weights: Dict[str, float] = Field(
@@ -363,6 +367,7 @@ class ArgusEnvSettings(BaseSettings):
     spanner_instance_id: str = Field(default="", alias="SPANNER_INSTANCE_ID")
     spanner_database_id: str = Field(default="", alias="SPANNER_DATABASE_ID")
     hf_token: str = Field(default="", alias="HF_TOKEN")
+    safety_critic_endpoint: str = Field(default="http://localhost:8001", alias="SAFETY_CRITIC_ENDPOINT")
 
     model_config = {"env_file": ".env", "populate_by_name": True}
 

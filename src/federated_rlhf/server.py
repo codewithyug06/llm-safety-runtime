@@ -13,7 +13,7 @@ from src.exceptions import FederatedRoundError, GradientAggregationError
 logger = structlog.get_logger(__name__)
 
 class ArgusFedAvgStrategy:
-     def __init__(
+    def __init__(
         self,
         min_fit_clients: int = 2,
         min_evaluate_clients: int = 2,

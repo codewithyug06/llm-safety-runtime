@@ -244,7 +244,7 @@ class TelemetryConsumer:
         self,
         telemetry_topic: str = "argus.telemetry",
         predictions_topic: str = "argus.risk.predictions",
-        bootstrap_servers: str = "localhost:9092",
+        bootstrap_servers: Optional[str] = None,
         consumer_group: str = "argus-oracle-consumer",
         oracle_model_path: str = "models/oracle/patchtst.pt",
         calibrator_path: str = "models/oracle/calibrator.pkl",
@@ -253,9 +253,10 @@ class TelemetryConsumer:
         inference_interval_s: float = 10.0,
         device: str = "cpu",
     ) -> None:
+        from src.config import load_env_settings
         self._telemetry_topic = telemetry_topic
         self._predictions_topic = predictions_topic
-        self._bootstrap_servers = bootstrap_servers
+        self._bootstrap_servers = bootstrap_servers or load_env_settings().kafka_bootstrap_servers
         self._consumer_group = consumer_group
         self._oracle_model_path = Path(oracle_model_path)
         self._calibrator_path = Path(calibrator_path)

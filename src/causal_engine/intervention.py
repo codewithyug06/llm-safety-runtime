@@ -25,11 +25,24 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
-import jax
-import jax.numpy as jnp
+try:
+    import jax
+    import jax.numpy as jnp
+    from jax import Array
+    _JAX_AVAILABLE = True
+except ImportError:
+    jax = None
+    import numpy as jnp  # type: ignore
+    Array = Any  # type: ignore
+    _JAX_AVAILABLE = False
+
 import numpy as np
 import structlog
-from jax import Array
+
+def _jit(fn: Callable) -> Callable:
+    if _JAX_AVAILABLE and jax is not None:
+        return jax.jit(fn)
+    return fn
 
 logger = structlog.get_logger(__name__)
 
@@ -155,7 +168,7 @@ class InterventionResult:
 
 # ── JAX-accelerated intervention functions ────────────────────────────────────
 
-@jax.jit
+@_jit
 def scale_attention_weights(
     attention_weights: Array,
     head_mask: Array,
@@ -189,7 +202,7 @@ def scale_attention_weights(
     return attention_weights * effective_scales
 
 
-@jax.jit
+@_jit
 def compute_ablation_effect(
     original_activations: Array,
     ablated_activations: Array,
@@ -221,7 +234,7 @@ def compute_ablation_effect(
     return ablated_logit - orig_logit  # positive = ablation makes it safer
 
 
-@jax.jit
+@_jit
 def mean_activation_patch(
     target_activations: Array,
     reference_activations: Array,
@@ -248,7 +261,10 @@ def mean_activation_patch(
     )
 
     # Build index mask for head_idx
-    head_one_hot = jax.nn.one_hot(head_idx, num_heads)  # (heads,)
+    if _JAX_AVAILABLE and jax is not None:
+        head_one_hot = jax.nn.one_hot(head_idx, num_heads)  # (heads,)
+    else:
+        head_one_hot = np.eye(num_heads)[head_idx]
     head_mask = head_one_hot[None, :, None]  # (1, heads, 1)
 
     return jnp.where(head_mask, ref_mean_broadcast, target_activations)
@@ -475,7 +491,7 @@ class CausalInterventionEngine:
         self._default_scale = default_scale_factor
 
         # Pre-compile JAX functions
-        self._scale_fn = jax.jit(scale_attention_weights)
+        self._scale_fn = _jit(scale_attention_weights)
 
         logger.info(
             "causal_engine_initialized",

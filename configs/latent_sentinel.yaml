@@ -33,12 +33,26 @@ probes:
     probe_dim: 128
     threshold: 0.60
 
+  prompt_injection:
+    enabled: true
+    model_path: "models/probes/prompt_injection_probe_llama31_8b.pt"
+    probe_dim: 128
+    threshold: 0.50
+
+  pii_leakage:
+    enabled: true
+    model_path: "models/probes/pii_leakage_probe_llama31_8b.pt"
+    probe_dim: 128
+    threshold: 0.55
+
 aggregation:
   category_weights:
     hallucination: 0.20
     jailbreak: 0.35
     toxic_reasoning: 0.30
     policy_violation: 0.15
+    prompt_injection: 0.30
+    pii_leakage: 0.25
 
   layer_weights:
     "31": 1.5   

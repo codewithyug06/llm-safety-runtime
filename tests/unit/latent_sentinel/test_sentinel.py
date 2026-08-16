@@ -102,6 +102,8 @@ def all_probes(hidden_dim: int) -> Dict[ProbeCategory, LinearResidualProbe]:
         ProbeCategory.JAILBREAK: LinearResidualProbe(hidden_dim, ProbeCategory.JAILBREAK),
         ProbeCategory.TOXIC_REASONING: LinearResidualProbe(hidden_dim, ProbeCategory.TOXIC_REASONING),
         ProbeCategory.POLICY_VIOLATION: LinearResidualProbe(hidden_dim, ProbeCategory.POLICY_VIOLATION),
+        ProbeCategory.PROMPT_INJECTION: LinearResidualProbe(hidden_dim, ProbeCategory.PROMPT_INJECTION),
+        ProbeCategory.PII_LEAKAGE: LinearResidualProbe(hidden_dim, ProbeCategory.PII_LEAKAGE),
     }
 
 
@@ -350,3 +352,31 @@ class TestLatentSentinel:
             assert sig.total_latency_ms < 100, (
                 f"Probe latency {sig.total_latency_ms:.1f}ms exceeds test threshold"
             )
+
+    def test_new_probe_categories_supported(
+        self,
+        hidden_dim: int,
+        activation_bundle: ActivationBundle,
+    ) -> None:
+        """Verify PROMPT_INJECTION and PII_LEAKAGE probes run and evaluate properly."""
+        injection_probe = LinearResidualProbe(hidden_dim, ProbeCategory.PROMPT_INJECTION)
+        pii_probe = LinearResidualProbe(hidden_dim, ProbeCategory.PII_LEAKAGE)
+
+        score_inj, conf_inj = injection_probe(activation_bundle)
+        score_pii, conf_pii = pii_probe(activation_bundle)
+
+        assert 0.0 <= score_inj <= 1.0
+        assert 0.0 <= conf_inj <= 1.0
+        assert 0.0 <= score_pii <= 1.0
+        assert 0.0 <= conf_pii <= 1.0
+
+        registry = ProbeRegistry(
+            probes={
+                ProbeCategory.PROMPT_INJECTION: injection_probe,
+                ProbeCategory.PII_LEAKAGE: pii_probe,
+            }
+        )
+        signal = registry.dispatch(activation_bundle)
+        assert signal is not None
+        assert ProbeCategory.PROMPT_INJECTION in signal.probe_results
+        assert ProbeCategory.PII_LEAKAGE in signal.probe_results

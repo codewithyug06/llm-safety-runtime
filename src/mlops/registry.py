@@ -76,11 +76,12 @@ class ArgusModelRegistry:
 
     def __init__(
         self,
-        tracking_uri: str = "http://localhost:5000",
+        tracking_uri: Optional[str] = None,
         min_safety_accuracy: float = DEFAULT_MIN_SAFETY_ACCURACY,
         min_f1: float = DEFAULT_MIN_F1,
     ) -> None:
-        self._tracking_uri = tracking_uri
+        from src.config import load_env_settings
+        self._tracking_uri = tracking_uri or load_env_settings().mlflow_tracking_uri
         self.min_safety_accuracy = min_safety_accuracy
         self.min_f1 = min_f1
         self._client: Optional[Any] = None
